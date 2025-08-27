@@ -850,6 +850,27 @@ function getDisplayOptions() {
   };
 }
 
+function insertFwdBack(container) {
+  const backBtn = document.createElement("button");
+  backBtn.id = "pageBackBtn";
+  backBtn.title = "Previous Search Results Page";
+  backBtn.textContent = "← Page";
+  backBtn.onclick = prevPage;
+
+  const forwardBtn = document.createElement("button");
+  forwardBtn.id = "pageForwardBtn";
+  forwardBtn.title = "Next Search Results Page";
+  forwardBtn.textContent = "Page →";
+  forwardBtn.onclick = nextPage;
+
+  const btnWrapper = document.createElement("div");
+  btnWrapper.style.width = "100%";           // Full width of the container
+  btnWrapper.style.display = "flex";         // Keep buttons side by side
+  btnWrapper.appendChild(backBtn);
+  btnWrapper.appendChild(forwardBtn);
+  container.appendChild(btnWrapper);
+}
+
 let currentRender = "reference"; // used to track current rendering mode, changed in render()
 function render(customVerses = null) {
   if (customVerses && Array.isArray(customVerses)) {
@@ -874,24 +895,7 @@ function render(customVerses = null) {
   // Check for custom input (either word list or verse list)
   if (customVerses && Array.isArray(customVerses)) {
     if (searchState.boundaries.length > 1) {
-      const backBtn = document.createElement("button");
-      backBtn.id = "pageBackBtn";
-      backBtn.title = "Previous Search Results Page";
-      backBtn.textContent = "← Page";
-      backBtn.onclick = prevPage;
-
-      const forwardBtn = document.createElement("button");
-      forwardBtn.id = "pageForwardBtn";
-      forwardBtn.title = "Next Search Results Page";
-      forwardBtn.textContent = "Page →";
-      forwardBtn.onclick = nextPage;
-
-      const btnWrapper = document.createElement("div");
-      btnWrapper.style.width = "100%";           // Full width of the container
-      btnWrapper.style.display = "flex";         // Keep buttons side by side
-      btnWrapper.appendChild(backBtn);
-      btnWrapper.appendChild(forwardBtn);
-      container.appendChild(btnWrapper);
+      insertFwdBack(container)
     }
 
     const isWordList = Array.isArray(customVerses[0]) && customVerses[0].length === 3;
@@ -1022,6 +1026,9 @@ function render(customVerses = null) {
       });
 
       container.appendChild(wrapper);
+      if (searchState.boundaries.length > 1) {
+        insertFwdBack(container)
+      }
       return;
     }
 
@@ -1044,6 +1051,9 @@ function render(customVerses = null) {
         verseEl
       ));
     });
+    if (searchState.boundaries.length > 1) {
+      insertFwdBack(container)
+    }
     return;
   }
 

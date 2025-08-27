@@ -296,8 +296,8 @@ select {
 
 #greekHelpPopup {
   position: fixed;
-  top: 10px;  /* adjust to move it down */
-  left: 10px;  /* adjust to move it to the right */
+  top: 2.5rem;  /* adjust to move it down */
+  left: 1rem;  /* adjust to move it to the right */
   background: #fdfdf5;
   border: 1px solid #ccc;
   padding: 4px;
