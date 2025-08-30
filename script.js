@@ -181,7 +181,7 @@ async function updateToolLastUpdated() {
 
 // Run it
 updateToolLastUpdated();
-
+// DO NOT TOUCH THE NEXT TWO LINES They are removed by the compile script.
 let baseData;
 let lookupdb;
 // Main initialization function
