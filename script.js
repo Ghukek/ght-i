@@ -854,9 +854,12 @@ function adjustSelections() {
 }
 
 function setFontSize() {
-  let size = elements.fontSize.value;
-  document.documentElement.style.setProperty("--font-size", size + "px");
-  document.documentElement.style.setProperty("--font-size-reduced", Math.floor(size * .75) + "px")
+  let size1 = elements.fontSize.value;
+  let size2 = elements.fontSize2.value;
+  let size3 = elements.englishSecondary.checked ? elements.fontSize2.value : elements.fontSize.value;
+  document.documentElement.style.setProperty("--font-size", size1 + "px");
+  document.documentElement.style.setProperty("--font-size-reduced", size2 + "px");
+  document.documentElement.style.setProperty("--font-size-english", size3 + "px");
 }
 
 const lookupUnderscore = { // Run reportnonadjacent.py to update this

@@ -63,8 +63,13 @@
       <label title="When checked, English text will use Nathan's formatting style."><input type="checkbox" id="customFormat" data-id> Format English</label><br>
       <label title="Select how many search results or verses to show at a time." for="searchSize">Max Results:</label>
       <input id="searchSize" type="number" value="100" min="1" step="1" style="width: 45px;" data-id><br>
-      Font Size:&nbsp;<input id="fontSize" type="number" value="16" min="1" step="1" style="width: 45px;" data-id/>
-      <button id="applyFont" onclick="setFontSize()" data-id>Apply</button>
+      <span title="Font size adjustment." class="head-group3">
+        <span>Font Size:</span>
+        <span>Primary:&nbsp;<input id="fontSize" type="number" value="16" min="1" step="1" style="width: 45px;" data-id/></span>
+        <span>Secondary:&nbsp;<input id="fontSize2" type="number" value="12" min="1" step="1" style="width: 45px;" data-id/></span>
+        <label title="When checked, English text will use the secondary font size."><input type="checkbox" id="englishSecondary" data-id> English Secondary</label>
+        <button id="applyFont" onclick="setFontSize()" data-id>Apply</button>
+      </span>
       <button class="buttonInDropdown" onclick="saveSettings()">Save Display Settings</button><br>
       <button class="buttonInDropdown" onclick="resetSettings()">Reset Display Settings</button>
     </div>
@@ -127,6 +132,7 @@
 :root {
   --font-size: 16px;
   --font-size-reduced: 12px;
+  --font-size-english: 16px;
 }
 
 .verse-label {
@@ -175,6 +181,7 @@ body {
 }
 
 .eng { 
+  font-size: var(--font-size-english);
   color: rgb(0, 75, 0); 
   cursor: pointer;
 }
@@ -540,7 +547,7 @@ let lookupdb = [["kai","Conj",2532,"kai","and",6229],["o","Art-NMS",3588,"o","th
 
 // Compile-time timestamps
 document.getElementById("data_last_updated")?.setAttribute("data-compile-lastmod", "Sun, 31 Aug 2025 00:14:51 GMT");
-document.getElementById("tool_last_updated")?.setAttribute("data-compile-lastmod", "Sun, 31 Aug 2025 17:41:59 GMT");
+document.getElementById("tool_last_updated")?.setAttribute("data-compile-lastmod", "Mon, 01 Sep 2025 12:49:59 GMT");
 
 // App code
 const greekToUnicode = {
@@ -1398,9 +1405,12 @@ function adjustSelections() {
 }
 
 function setFontSize() {
-  let size = elements.fontSize.value;
-  document.documentElement.style.setProperty("--font-size", size + "px");
-  document.documentElement.style.setProperty("--font-size-reduced", Math.floor(size * .75) + "px")
+  let size1 = elements.fontSize.value;
+  let size2 = elements.fontSize2.value;
+  let size3 = elements.englishSecondary.checked ? elements.fontSize2.value : elements.fontSize.value;
+  document.documentElement.style.setProperty("--font-size", size1 + "px");
+  document.documentElement.style.setProperty("--font-size-reduced", size2 + "px");
+  document.documentElement.style.setProperty("--font-size-english", size3 + "px");
 }
 
 const lookupUnderscore = { // Run reportnonadjacent.py to update this

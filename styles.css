@@ -1,6 +1,7 @@
 :root {
   --font-size: 16px;
   --font-size-reduced: 12px;
+  --font-size-english: 16px;
 }
 
 .verse-label {
@@ -49,6 +50,7 @@ body {
 }
 
 .eng { 
+  font-size: var(--font-size-english);
   color: rgb(0, 75, 0); 
   cursor: pointer;
 }

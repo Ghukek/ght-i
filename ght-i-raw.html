@@ -72,8 +72,13 @@
       <label title="When checked, English text will use Nathan's formatting style."><input type="checkbox" id="customFormat" data-id> Format English</label><br>
       <label title="Select how many search results or verses to show at a time." for="searchSize">Max Results:</label>
       <input id="searchSize" type="number" value="100" min="1" step="1" style="width: 45px;" data-id><br>
-      Font Size:&nbsp;<input id="fontSize" type="number" value="16" min="1" step="1" style="width: 45px;" data-id/>
-      <button id="applyFont" onclick="setFontSize()" data-id>Apply</button>
+      <span title="Font size adjustment." class="head-group3">
+        <span>Font Size:</span>
+        <span>Primary:&nbsp;<input id="fontSize" type="number" value="16" min="1" step="1" style="width: 45px;" data-id/></span>
+        <span>Secondary:&nbsp;<input id="fontSize2" type="number" value="12" min="1" step="1" style="width: 45px;" data-id/></span>
+        <label title="When checked, English text will use the secondary font size."><input type="checkbox" id="englishSecondary" data-id> English Secondary</label>
+        <button id="applyFont" onclick="setFontSize()" data-id>Apply</button>
+      </span>
       <button class="buttonInDropdown" onclick="saveSettings()">Save Display Settings</button><br>
       <button class="buttonInDropdown" onclick="resetSettings()">Reset Display Settings</button>
     </div>
