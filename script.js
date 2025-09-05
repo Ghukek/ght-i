@@ -354,7 +354,13 @@ function loadState(index) {
     if (!el) return;
 
     if (el.type === "checkbox") el.checked = state[id];
-    else el.value = state[id];
+    else {
+      if (el.id === "chapterStart") populateChapters(state["bookStart"], el);
+      if (el.id === "chapterEnd") populateChapters(state["bookEnd"], el);
+      if (el.id === "verseStart") populateVerses(state["bookStart"], state["chapterStart"], el);
+      if (el.id === "verseEnd") populateVerses(state["bookEnd"], state["chapterEnd"], el);
+      el.value = state[id];
+    }
   });
 
   historyIndex = index;
@@ -874,7 +880,7 @@ const lookupUnderscore = { // Run reportnonadjacent.py to update this
   "hardly": ["moliw"],
   "me": ["me"],
   "myself": ["emayton"],
-  "same": ["oyton"],
+  "same": ["oyton", "ayto"],
   "time": ["xronon"],
   "us": ["hmaw"],
   "you": ["ymas"],
@@ -1533,6 +1539,7 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
     } else if (showEnglish) {
       // Add a non-clickable space span for layout consistency
       const spaceSpan = document.createElement('span');
+      spaceSpan.className = "eng";
       spaceSpan.textContent = '\u00A0';
       wordEl.appendChild(spaceSpan);
     }
