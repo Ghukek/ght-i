@@ -8,6 +8,16 @@ const greekToUnicode = {
   v: 'ω'
 };
 
+const greekToTranslit = {
+  a: 'a', b: 'b', g: 'g', d: 'd',
+  e: 'e', z: 'z', h: 'ā', u: 'th',
+  i: 'i', k: 'k', l: 'l', m: 'm',
+  n: 'n', j: 'x', o: 'o', p: 'p',
+  r: 'r', s: 's', w: 's', t: 't',
+  y: 'u', f: 'ph', x: 'ch', c: 'ps',
+  v: 'ō'
+};
+
 const posMap = {
   'N': 'noun',
   'V': 'verb',
@@ -79,6 +89,11 @@ const bookAbb = [
 function toGreek(str) {
   if (!str || str.trim() === "") return "&nbsp;";
   return str.replace(/[a-z]/g, c => greekToUnicode[c] || c);
+}
+
+function toInterlin(str) {
+  if (!str || str.trim() === "") return "&nbsp;";
+  return str.replace(/[a-z]/g, c => greekToTranslit[c] || c);
 }
 
 function toLatin(str) {
@@ -1695,6 +1710,7 @@ function showPopup(e) {
   const count = target.dataset.count || "";
 
   const grkDisplay = toGreek(grk);
+  const interlinDisp = toInterlin(grk);
   const rootsDisplay = toGreek(rootsRaw);
 
   // Helper to wrap values with clickable spans and add data attribute for searching
@@ -1748,6 +1764,10 @@ function showPopup(e) {
 
   if (!pEng && target.dataset.rEng) {
     popupContent += '<strong>Translations:</strong> ' + target.dataset.rEng + '<br>';
+  }
+
+  if (document.getElementById("translitGreek").checked) {
+    popupContent += '<strong>Translit:</strong> ' + interlinDisp;
   }
 
   if (popupContent.endsWith('<br>')) {
