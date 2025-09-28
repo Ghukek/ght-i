@@ -108,14 +108,30 @@ function togglePopup(id) {
   });
 
   const popup = document.getElementById(id);
-  popup.style.display = (popup.style.display === 'block') ? 'none' : 'block';
+  const isVisible = popup.style.display === 'block';
+  popup.style.display = isVisible ? 'none' : 'block';
 
-  // Optional: reposition near the button that triggered it
-  const button = document.querySelector(`button[onclick="togglePopup('${id}')"]`);
-  if (popup.style.display === 'block' && button) {
-    const rect = button.getBoundingClientRect();
-    popup.style.top = `${rect.bottom + window.scrollY}px`;
-    popup.style.left = `${rect.left + window.scrollX}px`;
+  if (!isVisible) {
+    // Reposition near the button that triggered it
+    const button = document.querySelector(`button[onclick="togglePopup('${id}')"]`);
+    if (button) {
+      const rect = button.getBoundingClientRect();
+      popup.style.top = `${rect.bottom + window.scrollY}px`;
+
+      // Default left position
+      let left = rect.left + window.scrollX;
+
+      // Measure popup width
+      const popupWidth = popup.offsetWidth || 280; // fallback to your max-width
+      const viewportWidth = window.innerWidth;
+
+      // If it overflows, adjust left so it fits
+      if (left + popupWidth > viewportWidth - 10) {
+        left = viewportWidth - popupWidth - 10; // 10px margin from right edge
+      }
+
+      popup.style.left = `${Math.max(left, 10)}px`; // also prevent it going off left edge
+    }
   }
 }
 
