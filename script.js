@@ -1125,6 +1125,7 @@ function render(customVerses = null) {
   let showVerses = elements.showVerses.checked;
   const reverseInterlinear = elements.reverseInterlinear.checked;
   const newlineAfterVerse = elements.newlineAfterVerse.checked;
+  const altSearch = elements.altSearch.checked;
 
   let passUnderscore = null;
   let countContext = 0;
@@ -1164,14 +1165,17 @@ function render(customVerses = null) {
         const row = document.createElement("div");
         row.className = "word-row";
 
-        let grk = "", pcode = "", strongs = "", roots = "", cEng = "", count = 0;
+        let grk = "", pcode = "", strongs = "", roots = "", cEng = "", rEng = "", count = 0;
 
-        if (typeof ident === "string" && /^[A-Za-z]+$/.test(ident)) {
-          // ident is actually the greek word from LXX auto-fill.
-          grk = ident;
+        if ((typeof ident === "string" && /^[A-Za-z]+$/.test(ident)) || (altSearch)) {
+            if (typeof ident === "string" && /^[A-Za-z]+$/.test(ident)) {
+              grk = ident; // ident is actually the greek word from LXX auto-fill.
+            } else {
+              grk = lookupdb[ident][0];
+            }
           // ident is blank → collect ALL entries for this grk
           const matches = Object.entries(lookupdb)
-          .filter(([, val]) => val[0] === ident) // compare against Greek in val[0]
+          .filter(([, val]) => val[0] === grk) // compare against Greek in val[0]
           .map(([, val]) => val);
 
           if (matches.length > 0) {
@@ -1230,6 +1234,7 @@ function render(customVerses = null) {
           span.dataset.strongs = strongs || "";
           span.dataset.roots = roots || "";
           span.dataset.count = count || "";
+          span.dataset.rEng = rEng || "";
 
           span.addEventListener("mouseenter", showPopupDelay);
           span.addEventListener("mouseleave", hidePopup);
@@ -1467,19 +1472,24 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
     const [ident, eng, num] = verseWords[i]; //Refactor dropped grk
     const wordEl = document.createElement("span");
     wordEl.className = "word";
+    const altSearch = elements.altSearch.checked;
 
     let grk, pcode, strongs, roots, rEng, count;
     let lookupData = [];
 
-    if (Number.isInteger(ident) && ident !== -1) { //Refactor moved this block earlier.
+    if (Number.isInteger(ident) && ident !== -1 && !altSearch) { //Refactor moved this block earlier.
       // Normal case: lookup by ident
       lookupData = lookupdb[ident] || [];
       [grk, pcode, strongs, roots, rEng, count] = lookupData; //Refactor added grk to beginning.
     } else if (ident != -1) { // BEGIN LXX Helper
-      grk = ident;
+      if (typeof ident === "string" && /^[A-Za-z]+$/.test(ident)) {
+        grk = ident; // ident is actually the greek word from LXX auto-fill.
+      } else {
+        grk = lookupdb[ident][0];
+      }
       // ident is blank → collect ALL entries for this grk
       const matches = Object.entries(lookupdb)
-      .filter(([, val]) => val[0] === ident) // compare against Greek in val[0]
+      .filter(([, val]) => val[0] === grk) // compare against Greek in val[0]
       .map(([, val]) => val);
 
       if (matches.length > 0) {
@@ -1763,6 +1773,7 @@ function showPopup(e) {
   const target = e.currentTarget || e.target;
   const popup = document.getElementById("wordPopup");
   const wordEl = e.currentTarget || e.target;
+  const altSearch = elements.altSearch.checked;
 
   const grk = target.dataset.grk || "";
   const pEng = target.dataset.pEng || "";
@@ -1825,7 +1836,7 @@ function showPopup(e) {
     }
   }
 
-  if (!pEng && target.dataset.rEng) {
+  if ((!pEng || altSearch) && target.dataset.rEng) {
     popupContent += '<strong>Translations:</strong> ' + target.dataset.rEng + '<br>';
   }
 
