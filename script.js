@@ -3059,7 +3059,54 @@ const connectorOperators = {
 
 function openQueryBuilder() {
   container.innerHTML = "";
-  addTermRow();
+
+  const currentQuery = searchInput.value.trim();
+
+  if (currentQuery) {
+    // Split into tokens: space creates new sets
+    // Each "term set" may contain + or | operators
+    const termSets = currentQuery.split(" "); // note: spaces = NEW SETS
+
+    termSets.forEach((set, setIndex) => {
+      // Split within each set by AND/OR connectors
+      const parts = set.split(/([+|])/); // keep the operators
+
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i].trim();
+        if (!part) continue;
+
+        if (part === "+" || part === "|") continue; // handled after term
+
+        // Identify any term-level operators (=, ~, ~=)
+        let termOp = "";
+        let termValue = part;
+        if (part.startsWith("~=")) {
+          termOp = "NOT EQUALS";
+          termValue = part.slice(2);
+        } else if (part.startsWith("~")) {
+          termOp = "NOT";
+          termValue = part.slice(1);
+        } else if (part.startsWith("=")) {
+          termOp = "EQUALS";
+          termValue = part.slice(1);
+        }
+
+        // Determine the following connector
+        let connector = "";
+        const next = parts[i + 1];
+        if (next === "+") connector = "AND";
+        else if (next === "|") connector = "OR";
+        else if (setIndex < termSets.length - 1 && i === parts.length - 1)
+          connector = "SPACE"; // end of set → new set follows
+
+        addTermRow(termOp, termValue, connector);
+      }
+    });
+  } else {
+    // no current query: start with empty row
+    addTermRow();
+  }
+
   modal.style.display = "block";
 }
 

@@ -108,6 +108,26 @@
       <div id="greekHelpPopup" class="popup-image" hidden>
         <img src="grkkeyboard.png" alt="Greek Keyboard Layout">
       </div>
+      <button id="buildQueryBtn">Build Query</button>
+
+      <!-- Query Builder Modal -->
+      <div id="queryBuilderModal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <h2>Build Search Query</h2>
+          <!-- Greek Keyboard Toggle Image -->
+          <img id="greekKeyboardImage" src="grkkeyboard.png" alt="Greek Keyboard Layout" style="display:none; width: 300px; margin-top: 5px;">
+          <br>
+          <label title="Convert keyboard input to Greek letters"><input type="checkbox" id="convertToGreek2" onclick="keyboardswitch()"> Greek Keyboard</label>
+          <button id="toggleGreekImageBtn" type="button" title="Show/Hide Greek keyboard help">?</button>
+          
+          <div id="queryBuilderContainer"></div>
+          <div class="modal-actions">
+            <button id="addTermBtn">+ Add Term</button>
+            <button id="generateQueryBtn">Generate</button>
+            <button id="cancelQueryBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
     </span>
   </span>
   <div id="output"></div>
@@ -549,6 +569,69 @@ select {
   cursor: pointer;
 }
 
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 10px; /* ensures modal-content has room to breathe */
+  box-sizing: border-box;
+}
+
+.modal-content {
+  background: #fdfdf5;
+  padding: 20px;
+  border-radius: 12px;
+  width: 100%;           /* <= responsive, never exceeds viewport width */
+  max-width: 400px;     /* <= keep your preferred layout */
+  max-height: 80vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.term-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap; /* ✅ prevents row content from running off-screen */
+}
+
+.term-row select,
+.term-row input {
+  padding: 4px;
+  min-width: 70px;
+}
+
+.term-row input {
+  flex: 1;
+}
+
+.term-row button {
+  background: #f0e9d8;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.term-row button:hover {
+  background: #ddd6c4;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
 </style>
 <script>
 // JSON data embedded
@@ -557,7 +640,7 @@ let lookupdb = [["kai","Conj",2532,"kai","and",6812],["o","Art-NMS",3588,"o","th
 
 // Compile-time timestamps
 document.getElementById("data_last_updated")?.setAttribute("data-compile-lastmod", "Fri, 31 Oct 2025 16:54:50 GMT");
-document.getElementById("tool_last_updated")?.setAttribute("data-compile-lastmod", "Fri, 31 Oct 2025 17:23:59 GMT");
+document.getElementById("tool_last_updated")?.setAttribute("data-compile-lastmod", "Fri, 31 Oct 2025 18:51:43 GMT");
 
 // App code
 const greekToUnicode = {
@@ -967,6 +1050,31 @@ function loadState(index) {
 function historyBack() { loadState(historyIndex - 1); }
 function historyForward() { loadState(historyIndex + 1); }
 
+function handleGreekInput(input, convertToGreekCheckbox) {
+  let originalValue = input.value;
+
+  // Always remove Greek diacritical marks
+  originalValue = originalValue.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // If convertToGreek is checked, convert Latin chars to Greek
+  if (convertToGreekCheckbox.checked) {
+    let converted = "";
+    for (const char of originalValue.toLowerCase()) {
+      converted += latinToGreek[char] || char;  // fallback if no match
+    }
+
+    // Avoid cursor jump
+    if (converted !== input.value) {
+      input.value = converted;
+    }
+  } else {
+    // Even if not converting, still update stripped diacritics
+    if (originalValue !== input.value) {
+      input.value = originalValue;
+    }
+  }
+}
+
 // Called only after baseData is loaded
 function setupEventListeners() {
   // Helper for start/end selectors
@@ -1053,32 +1161,8 @@ function setupEventListeners() {
   });
 
   elements.searchInput.addEventListener("input", function (e) {
-    const input = e.target;
-    let originalValue = input.value;
-
-    // Always remove Greek diacritical marks
-    // Normalize to NFD (decomposed), then strip combining marks
-    originalValue = originalValue.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-    // If convertToGreek is checked, convert Latin chars to Greek
-    if (elements.convertToGreek.checked) {
-      let converted = "";
-      for (const char of originalValue.toLowerCase()) {
-        converted += latinToGreek[char] || char;  // fallback if no match
-      }
-
-      // Avoid cursor jumping by replacing only if different
-      if (converted !== input.value) {
-        input.value = converted;
-      }
-    } else {
-      // Even if not converting, update the value if it had diacritics removed
-      if (originalValue !== input.value) {
-        input.value = originalValue;
-      }
-    }
+    handleGreekInput(e.target, elements.convertToGreek);
   });
-
 
   window.addEventListener('click', function (e) {
     const isMenuPopup = e.target.closest('.menu-popup');
@@ -2126,17 +2210,20 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
 
     if (elements.highlightSearch.checked && elements.searchInput.value.trim() !== "") {
       const searchTerms = elements.searchInput.value.trim().split(/\s+/);
-      let matched = false;
 
       for (let term of searchTerms) {
         let exact = elements.exactMatch.checked;
+        if (matchesLookup(term, lookupData)) {
+          wordEl.classList.add("highlightSearch");
+          break; // no need to keep checking once we found a match
+        }
+
         if (term.startsWith('=')) {
           exact = true;
           term = term.slice(1);
         }
         // check each variable against this term
         if (
-          matchesLookup(term, lookupData) || 
           (
             pEng &&
             (exact 
@@ -2149,7 +2236,6 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
               : toGreek(grk).includes(term.toLowerCase())) // END LXX Helper
           )
         ) {
-          matched = true;
           wordEl.classList.add("highlightSearch");
           break; // no need to keep checking once we found a match
         }
@@ -3136,7 +3222,7 @@ function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
 
       let target = Array.isArray(searchWord) ? searchWord[0] : searchWord;
       let exact = elements.exactMatch.checked;
-      if (target.startsWith('=')) {
+      if (!Number.isInteger(target) && target.startsWith('=')) {
         exact = true;
         target = target.slice(1);
       }
@@ -3590,6 +3676,147 @@ function copyText(mode) {
       .catch(err => console.error("Copy failed:", err));
   }
 }
+
+// === Query Builder 3.0 ===
+
+const buildQueryBtn = document.getElementById("buildQueryBtn");
+const modal = document.getElementById("queryBuilderModal");
+const container = document.getElementById("queryBuilderContainer");
+const addTermBtn = document.getElementById("addTermBtn");
+const generateQueryBtn = document.getElementById("generateQueryBtn");
+const cancelQueryBtn = document.getElementById("cancelQueryBtn");
+const searchInput = document.getElementById("searchInput");
+
+const termOperators = {
+  "": "",           // no operator
+  "EQUALS": "=",
+  "NOT": "~",
+  "NOT EQUALS": "~="  // optional
+};
+
+const connectorOperators = {
+  "": "",
+  "AND": "+",
+  "OR": "|",
+  "SPACE": " "  // space creates new term-set
+};
+
+function openQueryBuilder() {
+  container.innerHTML = "";
+  addTermRow();
+  modal.style.display = "block";
+}
+
+function closeQueryBuilder() {
+  modal.style.display = "none";
+}
+
+function addTermRow(termOp = "", termValue = "", connector = "") {
+  const row = document.createElement("div");
+  row.className = "term-row";
+
+  // --- Term operator dropdown (=, ~, ~=)
+  const termOpSelect = document.createElement("select");
+  Object.keys(termOperators).forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name || "(none)";
+    termOpSelect.appendChild(option);
+  });
+  termOpSelect.value = termOp;
+
+  // --- Term input
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Enter term";
+  input.value = termValue;
+
+  // --- HERE: attach Greek input handling
+  input.addEventListener("input", function(e) {
+    const convertToGreek2 = document.getElementById("convertToGreek2");
+    handleGreekInput(e.target, convertToGreek2);
+  });
+
+  // --- Connector dropdown (+, |, space)
+  const connectorSelect = document.createElement("select");
+  Object.keys(connectorOperators).forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name || "(none)";
+    connectorSelect.appendChild(option);
+  });
+  connectorSelect.value = connector;
+
+  // When connector changes to something non-empty, auto-add next row
+  connectorSelect.addEventListener("change", () => {
+    const val = connectorSelect.value;
+    if (val && !row.nextElementSibling) {
+      addTermRow(); // create new row automatically
+    }
+  });
+
+  // --- Remove button
+  const removeBtn = document.createElement("button");
+  removeBtn.textContent = "×";
+  removeBtn.onclick = () => row.remove();
+
+  row.append(termOpSelect, input, connectorSelect, removeBtn);
+  container.appendChild(row);
+}
+
+function generateQuery() {
+  let searchStr = "";
+
+  document.querySelectorAll(".term-row").forEach((row, index) => {
+    const termOpName = row.querySelector("select").value;
+    const termInput = row.querySelector("input").value.trim();
+    const connectorName = row.querySelectorAll("select")[1].value;
+
+    if (!termInput) return;
+
+    const opSymbol = termOperators[termOpName] || "";
+    const connectorSymbol = connectorOperators[connectorName] || "";
+
+    searchStr += opSymbol + termInput + connectorSymbol;
+  });
+
+  searchInput.value = searchStr;
+  closeQueryBuilder();
+}
+
+buildQueryBtn.addEventListener("click", openQueryBuilder);
+addTermBtn.addEventListener("click", () => addTermRow());
+generateQueryBtn.addEventListener("click", generateQuery);
+cancelQueryBtn.addEventListener("click", closeQueryBuilder);
+
+window.addEventListener("click", e => {
+  if (e.target === modal) closeQueryBuilder();
+});
+
+function keyboardswitch() {
+  const greekMain = document.getElementById("convertToGreek");
+  const greekPopup = document.getElementById("convertToGreek2");
+
+  // Sync both checkboxes
+  if (greekMain && greekPopup) {
+    const newState = greekPopup.checked;
+    greekMain.checked = newState;
+  }
+
+  // If you have other logic for keyboard switching, include it here
+  // Example: enableGreekKeyboard(newState);
+}
+
+const toggleBtn = document.getElementById("toggleGreekImageBtn");
+const greekImg = document.getElementById("greekKeyboardImage");
+
+toggleBtn.addEventListener("click", () => {
+  if (greekImg.style.display === "none") {
+    greekImg.style.display = "block";
+  } else {
+    greekImg.style.display = "none";
+  }
+});
 
 // Load initial data from server.
 loadBaseJson();
