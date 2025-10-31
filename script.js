@@ -1186,18 +1186,30 @@ function render(customVerses = null) {
             let totalCount = 0;
 
             for (const [_, pc, st, rt, re, ct] of matches) {
-              if (pc) pcodeSet.add(pc);
-              if (st) strongsSet.add(st);
-              if (rt) rootsSet.add(rt);
-              if (re) rEngSet.add(re);
-              if (ct) totalCount += ct || 0;
+              const normalize = v =>
+                String(v)
+                  .trim()
+                  .replace(/\u200B/g, "") // remove zero-width spaces
+                  .replace(/\s+/g, " "); // collapse multiple spaces
+
+              if (pc) pcodeSet.add(normalize(pc));
+              if (st) strongsSet.add(normalize(st));
+              if (rt) rootsSet.add(normalize(rt));
+              if (re) rEngSet.add(normalize(re));
+              if (ct) totalCount += Number(ct) || 0;
             }
 
-            pcode = [...pcodeSet].join(", ");
-            strongs = [...strongsSet].join(", ");
-            roots = [...rootsSet].join(", ");
-            rEng = [...rEngSet].join(", ");
-            count = totalCount; // END LXX Helper
+            // Normalize rEng entries by removing leading "he-" or "she-"
+            const normalizedREngSet = new Set(
+              [...rEngSet].map(e => e.replace(/^(he|she|they|we|you|i|it|it\/he)-/i, ""))
+            );
+
+            // Reconstruct joined strings
+            pcode  = [...new Set(pcodeSet)].join(", ");
+            strongs = [...new Set(strongsSet)].join(", ");
+            roots  = [...new Set(rootsSet)].join(", ");
+            rEng   = [...normalizedREngSet].join(", ");
+            count  = totalCount; // END LXX Helper
           }
         } else {
           // ident is numeric, get data from lookupdb
@@ -1500,18 +1512,30 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
         let totalCount = 0;
 
         for (const [_, pc, st, rt, re, ct] of matches) {
-          if (pc) pcodeSet.add(pc);
-          if (st) strongsSet.add(st);
-          if (rt) rootsSet.add(rt);
-          if (re) rEngSet.add(re);
-          if (ct) totalCount += ct || 0;
+          const normalize = v =>
+            String(v)
+              .trim()
+              .replace(/\u200B/g, "") // remove zero-width spaces
+              .replace(/\s+/g, " "); // collapse multiple spaces
+
+          if (pc) pcodeSet.add(normalize(pc));
+          if (st) strongsSet.add(normalize(st));
+          if (rt) rootsSet.add(normalize(rt));
+          if (re) rEngSet.add(normalize(re));
+          if (ct) totalCount += Number(ct) || 0;
         }
 
-        pcode = [...pcodeSet].join(", ");
-        strongs = [...strongsSet].join(", ");
-        roots = [...rootsSet].join(", ");
-        rEng = [...rEngSet].join(", ");
-        count = totalCount; // END LXX Helper
+        // Normalize rEng entries by removing leading "he-" or "she-"
+        const normalizedREngSet = new Set(
+          [...rEngSet].map(e => e.replace(/^(he|she|they|we|you|i|it|it\/he)-/i, ""))
+        );
+
+        // Reconstruct joined strings
+        pcode  = [...new Set(pcodeSet)].join(", ");
+        strongs = [...new Set(strongsSet)].join(", ");
+        roots  = [...new Set(rootsSet)].join(", ");
+        rEng   = [...normalizedREngSet].join(", ");
+        count  = totalCount; // END LXX Helper
       } else {
         // Nothing found → default empty values
         pcode = strongs = roots = rEng = "";
@@ -1541,25 +1565,32 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
 
     if (elements.highlightSearch.checked && elements.searchInput.value.trim() !== "") {
       const searchTerms = elements.searchInput.value.trim().split(/\s+/);
-      let matched = false;
 
-      for (const term of searchTerms) {
+      for (let term of searchTerms) {
+        let exact = elements.exactMatch.checked;
+        if (matchesLookup(term, lookupData)) {
+          wordEl.classList.add("highlightSearch");
+          break; // no need to keep checking once we found a match
+        }
+
+        if (term.startsWith('=')) {
+          exact = true;
+          term = term.slice(1);
+        }
         // check each variable against this term
         if (
-          matchesLookup(term, lookupData) || 
           (
             pEng &&
-            (elements.exactMatch.checked 
+            (exact 
               ? pEng.toLowerCase() === term.toLowerCase()
               : pEng.toLowerCase().includes(term.toLowerCase())) 
           ) || ( // BEGIN LXX Helper
             grk &&
-            (elements.exactMatch.checked 
+            (exact 
               ? toGreek(grk) === term.toLowerCase()
               : toGreek(grk).includes(term.toLowerCase())) // END LXX Helper
           )
         ) {
-          matched = true;
           wordEl.classList.add("highlightSearch");
           break; // no need to keep checking once we found a match
         }
@@ -1816,7 +1847,8 @@ function showPopup(e) {
   }
 
   if (!showStrongs) {
-    popupContent += clickableLine("Strong's", strongs);
+    let label = strongs.includes(".") ? "AP-Strongs" : "Strong's";
+    popupContent += clickableLine(label, strongs);
   }
 
   if (!showRoots && rootsDisplay ) {
@@ -1881,7 +1913,7 @@ function showPopupDelay(event) {
   // Wait 300 ms before calling your original showPopup()
   popupDelayTimer = setTimeout(() => {
     showPopup(event); // your existing popup function
-  }, 100);
+  }, 250);
 }
 
 function hidePopup() {
@@ -2310,7 +2342,6 @@ function refSearch(searchTerm) {
 
 function searchVerses() {
   const searchTerm = elements.searchInput.value.trim();
-  const exact = elements.exactMatch.checked;
   const showContext = elements.showContext.checked;
   const uniqueWords = elements.uniqueWords.checked;
   const normalized = elements.normalized.checked;
@@ -2408,7 +2439,6 @@ function setReferenceRange({ b, c, v }) {
 
 function handleLookupMatches(searchTerm, matches) {
   const uniqueWords = elements.uniqueWords.checked;
-  const exact = elements.exactMatch.checked; // LXX Helper only
 
   // figure out paging bounds
   const startIndex = searchState.boundaries[searchState.page];
@@ -2447,6 +2477,12 @@ function handleLookupMatches(searchTerm, matches) {
     return;
   }
 
+  let exact = elements.exactMatch.checked; // BEGIN LXX Helper
+  if (searchTerm.startsWith('=')) {
+    exact = true;
+    searchTerm = searchTerm.slice(1);
+  } // END LXX Helper
+
   forEachVerse((b, c, v, verseData) => {
     verseData.forEach(([ident, eng]) => {
       if (morphMatches.includes(ident)) {
@@ -2475,7 +2511,11 @@ function handleLookupMatches(searchTerm, matches) {
 }
 
 function handleWordMatches(term, matches) {
-  const exact = elements.exactMatch.checked;
+  let exact = elements.exactMatch.checked;
+  if (term.startsWith('=')) {
+    exact = true;
+    term = term.slice(1);
+  }
   const searchTerm = term.toLowerCase();
 
   const startIndex = searchState.boundaries[searchState.page];
@@ -2519,7 +2559,6 @@ function prevPage() {
 }
 
 function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
-  const exact = elements.exactMatch.checked;
   const normalized = elements.normalized.checked;
   const ordered = elements.ordered.checked;       // new checkbox for ordered matching
   const adjacent = elements.adjacent.checked;     // new checkbox for adjacent matching
@@ -2535,7 +2574,15 @@ function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
 
     if (!Number.isInteger(tokenVal[0])) { // BEGIN LXX Helper
       grkToken = toGreek(tokenVal[0])
-      return exact ? (grkToken === searchWord) : grkToken.includes(searchWord);
+
+      let target = Array.isArray(searchWord) ? searchWord[0] : searchWord;
+      let exact = elements.exactMatch.checked;
+      if (!Number.isInteger(target) && target.startsWith('=')) {
+        exact = true;
+        target = target.slice(1);
+      }
+
+      return exact ? (grkToken === target) : grkToken.includes(target);
     } // END LXX Helper
 
     // searchWord is now either an array of idents or a single latin word.
@@ -2543,6 +2590,11 @@ function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
       return searchWord.includes(tokenVal[0]);
     } else {
       let lowerToken = tokenVal[1].toLowerCase();
+      let exact = elements.exactMatch.checked;
+      if (lowerToken.startsWith('=')) {
+        exact = true;
+        lowerToken = lowerToken.slice(1);
+      }
       return exact ? (lowerToken === searchWord) : lowerToken.includes(searchWord);
     }
   }
@@ -2630,7 +2682,6 @@ function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
 }
 
 function multiWordSearch(searchStr, lookupInd) {
-  const exact = elements.exactMatch.checked;
   const reverseInterlinear = elements.reverseInterlinear.checked;
   const ordered = elements.ordered.checked;       // new checkbox for ordered matching
   const adjacent = elements.adjacent.checked;     // new checkbox for adjacent matching
@@ -2676,7 +2727,7 @@ function multiWordSearch(searchStr, lookupInd) {
       .filter(i => i !== null);
 
     matches.push(...lookupMatches); // merge arrays
-    
+
     return matches;// END LXX Helper
 
     return lookupdb
@@ -2704,15 +2755,28 @@ function multiWordSearch(searchStr, lookupInd) {
     const containsWord = verseWords.some(([ident, wordEnglish]) => {
       if (Array.isArray(shortestLookup)) {
         // Standard: match by ident index
-        if (!Number.isInteger(ident)) { // If ident is stored as a greek word. BEGIN LXX Helper
+        if (!Number.isInteger(ident) && !Number.isInteger(shortestLookup[0])) { // If ident is stored as a greek word. BEGIN LXX Helper
           const wordG = toGreek(ident);
-          return exact ? wordG === shortestLookup[0] : wordG.includes(shortestLookup[0]);
+          let target = shortestLookup[0];
+          let exact = elements.exactMatch.checked;
+          if (target.startsWith('=')) {
+            exact = true;
+            target = target.slice(1);
+          }
+
+          return exact ? wordG === target : wordG.includes(target);
         } // END LXX Helper
         return shortestLookup.includes(ident);
       } else if (typeof shortestLookup === "string" && !/[α-ω]/i.test(shortestLookup)) {
         // Fallback: match by English text
         const wordEng = (wordEnglish || "").toLowerCase();
-        return exact ? wordEng === shortestLookup : wordEng.includes(shortestLookup);
+        let exact = elements.exactMatch.checked;
+        let target = shortestLookup;
+        if (target.startsWith('=')) {
+          exact = true;
+          target = target.slice(1);
+        }
+        return exact ? wordEng === target : wordEng.includes(target);
       } 
       return false;
     });
@@ -2793,7 +2857,8 @@ function multiWordSearch(searchStr, lookupInd) {
 }
 
 function matchesLookup(term, value) {
-  const exact = elements.exactMatch.checked;
+  let exact = elements.exactMatch.checked;
+  let result = true;
 
   // Handle OR '|' first (lowest precedence)
   if (term.includes('|')) {
@@ -2805,16 +2870,26 @@ function matchesLookup(term, value) {
     return term.split('+').every(subTerm => matchesLookup(subTerm, value));
   }
 
+  if (term.startsWith('~')) {
+    result = false;
+    term = term.slice(1);
+  }
+
+  if (term.startsWith('=')) {
+    exact = true;
+    term = term.slice(1);
+  }
+
   const lowerTerm = typeof term === "string" ? term.toLowerCase() : term;
 
   // Check if term starts with any of the prefixes
   if (Object.keys(posMap).some(posKey => term === posKey || term.startsWith(posKey + '-'))) {
-    if (matchMorphTag(term, value[1])) return true;
+    if (matchMorphTag(term, value[1])) return result;
   }
 
   // Check if term is a number
   if (!isNaN(term)) {
-    if (value[2] === Number(term)) return true;
+    if (value[2] === Number(term)) return result;
   }
   if (term.startsWith('.')) {
     const cleanTerm = toLatin(term.slice(1))
@@ -2829,13 +2904,13 @@ function matchesLookup(term, value) {
 
   if (/[α-ω]/i.test(term)) {
     const grkNorm = toLatin(term);
-    if (exact ? grkNorm === grk : grk.includes(grkNorm)) return true;
+    if (exact ? grkNorm === grk : grk.includes(grkNorm)) return result;
   } else {
     const val = rEng ? rEng.toLowerCase() : "";
-    if (exact ? val === lowerTerm : val.includes(lowerTerm)) return true;
+    if (exact ? val === lowerTerm : val.includes(lowerTerm)) return result;
   }
 
-  return false;
+  return !result;
 }
 
 function updateBCV(delta) {
