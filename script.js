@@ -406,6 +406,31 @@ function loadState(index) {
 function historyBack() { loadState(historyIndex - 1); }
 function historyForward() { loadState(historyIndex + 1); }
 
+function handleGreekInput(input, convertToGreekCheckbox) {
+  let originalValue = input.value;
+
+  // Always remove Greek diacritical marks
+  originalValue = originalValue.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // If convertToGreek is checked, convert Latin chars to Greek
+  if (convertToGreekCheckbox.checked) {
+    let converted = "";
+    for (const char of originalValue.toLowerCase()) {
+      converted += latinToGreek[char] || char;  // fallback if no match
+    }
+
+    // Avoid cursor jump
+    if (converted !== input.value) {
+      input.value = converted;
+    }
+  } else {
+    // Even if not converting, still update stripped diacritics
+    if (originalValue !== input.value) {
+      input.value = originalValue;
+    }
+  }
+}
+
 // Called only after baseData is loaded
 function setupEventListeners() {
   // Helper for start/end selectors
@@ -492,32 +517,8 @@ function setupEventListeners() {
   });
 
   elements.searchInput.addEventListener("input", function (e) {
-    const input = e.target;
-    let originalValue = input.value;
-
-    // Always remove Greek diacritical marks
-    // Normalize to NFD (decomposed), then strip combining marks
-    originalValue = originalValue.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-    // If convertToGreek is checked, convert Latin chars to Greek
-    if (elements.convertToGreek.checked) {
-      let converted = "";
-      for (const char of originalValue.toLowerCase()) {
-        converted += latinToGreek[char] || char;  // fallback if no match
-      }
-
-      // Avoid cursor jumping by replacing only if different
-      if (converted !== input.value) {
-        input.value = converted;
-      }
-    } else {
-      // Even if not converting, update the value if it had diacritics removed
-      if (originalValue !== input.value) {
-        input.value = originalValue;
-      }
-    }
+    handleGreekInput(e.target, elements.convertToGreek);
   });
-
 
   window.addEventListener('click', function (e) {
     const isMenuPopup = e.target.closest('.menu-popup');
@@ -3031,6 +3032,147 @@ function copyText(mode) {
       .catch(err => console.error("Copy failed:", err));
   }
 }
+
+// === Query Builder 3.0 ===
+
+const buildQueryBtn = document.getElementById("buildQueryBtn");
+const modal = document.getElementById("queryBuilderModal");
+const container = document.getElementById("queryBuilderContainer");
+const addTermBtn = document.getElementById("addTermBtn");
+const generateQueryBtn = document.getElementById("generateQueryBtn");
+const cancelQueryBtn = document.getElementById("cancelQueryBtn");
+const searchInput = document.getElementById("searchInput");
+
+const termOperators = {
+  "": "",           // no operator
+  "EQUALS": "=",
+  "NOT": "~",
+  "NOT EQUALS": "~="  // optional
+};
+
+const connectorOperators = {
+  "": "",
+  "AND": "+",
+  "OR": "|",
+  "SPACE": " "  // space creates new term-set
+};
+
+function openQueryBuilder() {
+  container.innerHTML = "";
+  addTermRow();
+  modal.style.display = "block";
+}
+
+function closeQueryBuilder() {
+  modal.style.display = "none";
+}
+
+function addTermRow(termOp = "", termValue = "", connector = "") {
+  const row = document.createElement("div");
+  row.className = "term-row";
+
+  // --- Term operator dropdown (=, ~, ~=)
+  const termOpSelect = document.createElement("select");
+  Object.keys(termOperators).forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name || "(none)";
+    termOpSelect.appendChild(option);
+  });
+  termOpSelect.value = termOp;
+
+  // --- Term input
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Enter term";
+  input.value = termValue;
+
+  // --- HERE: attach Greek input handling
+  input.addEventListener("input", function(e) {
+    const convertToGreek2 = document.getElementById("convertToGreek2");
+    handleGreekInput(e.target, convertToGreek2);
+  });
+
+  // --- Connector dropdown (+, |, space)
+  const connectorSelect = document.createElement("select");
+  Object.keys(connectorOperators).forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name || "(none)";
+    connectorSelect.appendChild(option);
+  });
+  connectorSelect.value = connector;
+
+  // When connector changes to something non-empty, auto-add next row
+  connectorSelect.addEventListener("change", () => {
+    const val = connectorSelect.value;
+    if (val && !row.nextElementSibling) {
+      addTermRow(); // create new row automatically
+    }
+  });
+
+  // --- Remove button
+  const removeBtn = document.createElement("button");
+  removeBtn.textContent = "×";
+  removeBtn.onclick = () => row.remove();
+
+  row.append(termOpSelect, input, connectorSelect, removeBtn);
+  container.appendChild(row);
+}
+
+function generateQuery() {
+  let searchStr = "";
+
+  document.querySelectorAll(".term-row").forEach((row, index) => {
+    const termOpName = row.querySelector("select").value;
+    const termInput = row.querySelector("input").value.trim();
+    const connectorName = row.querySelectorAll("select")[1].value;
+
+    if (!termInput) return;
+
+    const opSymbol = termOperators[termOpName] || "";
+    const connectorSymbol = connectorOperators[connectorName] || "";
+
+    searchStr += opSymbol + termInput + connectorSymbol;
+  });
+
+  searchInput.value = searchStr;
+  closeQueryBuilder();
+}
+
+buildQueryBtn.addEventListener("click", openQueryBuilder);
+addTermBtn.addEventListener("click", () => addTermRow());
+generateQueryBtn.addEventListener("click", generateQuery);
+cancelQueryBtn.addEventListener("click", closeQueryBuilder);
+
+window.addEventListener("click", e => {
+  if (e.target === modal) closeQueryBuilder();
+});
+
+function keyboardswitch() {
+  const greekMain = document.getElementById("convertToGreek");
+  const greekPopup = document.getElementById("convertToGreek2");
+
+  // Sync both checkboxes
+  if (greekMain && greekPopup) {
+    const newState = greekPopup.checked;
+    greekMain.checked = newState;
+  }
+
+  // If you have other logic for keyboard switching, include it here
+  // Example: enableGreekKeyboard(newState);
+}
+
+const toggleBtn = document.getElementById("toggleGreekImageBtn");
+const greekImg = document.getElementById("greekKeyboardImage");
+
+toggleBtn.addEventListener("click", () => {
+  if (greekImg.style.display === "none") {
+    greekImg.style.display = "block";
+  } else {
+    greekImg.style.display = "none";
+  }
+});
 
 // Load initial data from server.
 loadBaseJson();
