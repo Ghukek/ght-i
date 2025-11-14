@@ -498,7 +498,7 @@ function setupEventListeners() {
   // For checkboxes or inputs that trigger searchVerses
   [
     "searchBtn", "centerRange", "showContext", "exactMatch",
-    "uniqueWords", "ordered", "adjacent", "normalized"
+    "uniqueWords", "ordered", "adjacent", "normalized","expandMorph"
   ].forEach(id => {
     const el = elements[id];
     const event = id === "searchBtn" ? "click" : "change";
@@ -2070,8 +2070,7 @@ function parseMorphTag(tag) {
   };
 
   const voiceMap = {
-    'A': 'active', 'M': 'middle', 'P': 'passive', 'E': 'middle/passive',
-    'D': 'middle or passive'
+    'A': 'active', 'M': 'middle', 'P': 'passive', 'E': 'middle/passive'
   };
 
   const comparisonMap = {
@@ -2194,6 +2193,30 @@ function parseCGPN(cgpn) {
     : options[0];
 }
 
+// CONFIG: asymmetric expansion for pattern letters
+// PATTERN_EXPAND[patternLetter] = array of allowed tag letters (including itself)
+// Example: to make a pattern "A" match tags "A" or "B", set "A": ["A","B"]
+// This is asymmetric: a tag letter "B" will NOT match pattern "A" unless "A" maps to include "B".
+const PATTERN_EXPAND = {
+  // Case
+  "A": ["A","B","C"],
+  "N": ["N","B","C","Q","W","~"],
+  "V": ["V","C","Q"],
+  // Gender
+  "M": ["M","H","W","~"],
+  "F": ["F","H","~"],
+  //"N": ["N","W","~"], combined into case
+  // Person
+  "1": ["1","4"],
+  "3": ["3","4"],
+  // Number
+  "S": ["S","T"],
+  "P": ["P","T"],
+  // Voice
+  "M": ["M","E"],
+  "P": ["P","E"]
+};
+
 function matchMorphTag(pattern, tag) {
   pattern = pattern || "";
   tag = tag || "";
@@ -2214,6 +2237,7 @@ function matchMorphTag(pattern, tag) {
 
   // Helper to match a segment character-by-character
   function matchSegment(patSeg, tagSeg) {
+    expand = elements.expandMorph.checked;
     patSeg = patSeg || "";
     tagSeg = tagSeg || "";
 
@@ -2229,19 +2253,38 @@ function matchMorphTag(pattern, tag) {
 
     let p = 0, t = 0;
     while (p < patSeg.length) {
-      if (patSeg[p] === "_") {
-        // Match one character if available, otherwise zero
+      const pch = patSeg[p];
+
+      if (pch === "_") {
+        // underscore in pattern matches a single character if available,
+        // otherwise can match zero (your original semantics)
         if (t < tagSeg.length) t++;
         p++;
         continue;
       }
 
-      // Regular character match
-      if (tagSeg[t] === undefined || patSeg[p].toUpperCase() !== tagSeg[t].toUpperCase()) {
-        return false;
+      // If tag has run out of characters, fail
+      if (t >= tagSeg.length) return false;
+
+      // Compare characters with asymmetric expansion:
+      //  - exact match passes
+      //  - otherwise, see if pattern char expands to include tag char
+      const pc = pch.toUpperCase();
+      const tc = tagSeg[t].toUpperCase();
+
+      if (pc === tc) {
+        p++; t++;
+        continue;
       }
 
-      p++; t++;
+      // PATTERN_EXPAND: only expand based on the pattern character
+      if (PATTERN_EXPAND[pc] && PATTERN_EXPAND[pc].includes(tc) && expand) {
+        p++; t++;
+        continue;
+      }
+
+      // No match
+      return false;
     }
 
     // All pattern consumed; extra characters in tag are allowed only if last pat char was _
