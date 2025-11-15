@@ -2981,7 +2981,7 @@ function matchesLookup(term, value) {
     const rootParts = (value[3] || "")
       .split(",")
       .map(r => r.trim().toLowerCase());
-    return rootParts.some(r => cleanTerm === r);
+    return (exact ? rootParts[0] === cleanTerm : rootParts.some(r => cleanTerm === r));
   }
 
   const grk = value?.[0] || "";
