@@ -3346,5 +3346,25 @@ function toggleHeadGroups2() {
   document.getElementById('headWrapper2').classList.toggle('collapsed');
 }
 
+document.addEventListener("keydown", function (e) {
+  let delta = null;
+
+  // Horizontal arrows
+  if (e.key === "ArrowRight") delta = 1;
+  if (e.key === "ArrowLeft")  delta = -1;
+
+  // Vertical arrows
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") delta = 4;
+
+  // Modifiers
+  if (delta !== null) {
+    if (e.shiftKey) delta = delta > 0 ? 2 : -2;
+    if (e.ctrlKey)  delta = delta > 0 ? 3 : -3;
+
+    updateBCV(delta);
+    e.preventDefault(); // stop page scrolling
+  }
+});
+
 // Load initial data from server.
 loadBaseJson();

@@ -184,6 +184,7 @@
     <p>17 Dec: Added 'numeral' parsing code to accunt for Rev 13:18 '666'.</p>
     <p>25 Dec: Added collapsing for the header, the reference group and the search group in consideration of mobile browser screen real estate.</p>
     <p>25 Dec: Added page navigation buttons that align to the current verse range.</p>
+    <p>27 Dec: Added navigation using arrow keys.</p>
     <h3>Selecting passages by reference:</h3>
     <p>Select your start and end book, chapter, and verse from "Start Ref" and "End Ref". </p>
     <p>You may manually adjust how many verses to show at a time to by changing 'Verse Range'. A 'Verse Range' of '1' will show one verse. </p>
@@ -195,7 +196,7 @@
       <li>English: shows the English translation.</li>
       <li>Morphology: shows grammatical parsing information in abbreviated form. Expanded grammar information is shown in the popup.</li>
       <li>Strong's: shows Strong’s Concordance numbers.</li>
-      <li>Roots: shows my personal categorization of related words by showing the etymological breakdown of primitive roots from which they are constructed. Greek has many compound words. This is meant to be a more comprehesive set of connections than the Strong's concordance numbers. However, please be careful since some of the connections are a bit more spurious than others and you need to watch out for the etymological fallacy.s</li>
+      <li>Roots: shows my personal categorization of related words by showing the etymological breakdown of primitive roots from which they are constructed. Greek has many compound words. This is meant to be a more comprehesive set of connections than the Strong's concordance numbers. However, please be careful since some of the connections are a bit more spurious than others and you need to watch out for the etymological fallacy.</li>
     </ul>
     <p>The 'Display Options' allow you to adjust how to show the selected passages. You can also save or reset your settings here.</p>
     <p>The 'Max Results' selection sets how many verses or entries to display at a time when making a large search. This value also limits the number of verses to display when selecting by reference.</p>
@@ -203,10 +204,10 @@
     <p>To search, type text into the search bar and click 'Search'. You may also click on any clickable string in the body of the text or in the popups to automatically search that string. Use the 'Greek Keyboard' if you do not have a Greek keyboard set up in your operating system and want to type in Greek. When 'Greek Keyboard' is checked, the search bar will automatically convert your input to Greek characters to allow you to search for Greek words. Click the '?' button to see an image of a Greek keyboard if you don't know how to type in Greek. You may search for multiple words at a time.</p>
     <p>The 'Search Options' allow you to customize your search parameters. The explanation for these are as follows:</p>
     <ul>
-      <li>Exact Match: When checked, the search will only show words that are exactly as what you typed in (case insensitive). Otherwise, it will return all partial matches. When searching in English, "exact match" will take out any punctuation and add implied "of{" or "to{" brackets, such that if you were to search for "of{jesus}", you would find all cases of ιησου translated to the genitive case.</li>
+      <li>Exact Match: When checked, the search will only show words that are exactly as what you typed in (case insensitive). Otherwise, it will return all partial matches.</li>
       <li>Center Ref: When checked, this will center the verse containing the search terms in its context. Otherwise, the verse containing the search terms will be shown as the start of its context. For example, with a context of 5 verses, "the jesus tears." will show John 11:35-39 when unchecked or John 11:33-37 when checked.</li>
       <li>Show Context: When checked, this will return search results in the verse they appear in plus as much surrounding context as the user selects using 'Verse Range'. Otherwise it will just return a list of search results and the verse reference they appear in.</li>
-      <li>Normalize English: When checked, this will ignore punctuation and pull text out of nested brackets. For example, a search for "of{Jesus}" will not show cases of "of{the Jesus}" unless this is checked. </li>
+      <li>Normalize English: When checked, this will ignore punctuation and pull text out of nested brackets. For example, a search for "of{Jesus}" will not show cases of "Jesus}" (from "of{the Jesus}")unless this is checked. </li>
       <li>Unique Words: When checked, this will only show uniqe word pairs rather than every result. This is useful if a user is trying to look at all the different ways a specific word may be translated or inflected.</li>
       <li>Ordered: When searching for multiple words, this forces the words to appear in the order they were searched. So, "Jesus Anointed" will not return verses that have "Anointed Jesus" (e.g. Acts 5:42). Note that this setting will work for whichever word order you have currently checked. Thus, "ου μη" (Exact Match, Ordered, Adjacent) will return a lot of results in interlinear order, but zero in reverse interlinear.</li>
       <li>Adjacent: When searching for multiple words, this forces the words to be adjacent to each other. So, "Jesus Anointed" will not return "Jesus, the being-said 'Anointed'" (e.g. Matthew 1:18). </li>
@@ -220,7 +221,8 @@
       <li>To combine multiple terms in one word, use the + symbol to request that both search terms be applied. For example "Jesus+N-AMS" will only get cases where Jesus is the object of a verb. You can also use the | symbol to request either case, for example "Jesus|Anointed" will get all cases of Jesus or Anointed. This also works when combined with a space separated multi-word search.</li>
       <li>When searching by morphology tag, you can use the underscore (_) character to create wildcards. For example "Adj-A_" will return all accusative adjectives without regard for gender or number. "V-_O_-_" will likewise return all optative verbs.</li>
       <li>To search within my roots data, prefix a period '.' to the term.</li>
-      <li>To enforce "exact match" on only one term while allowing other terms to be partial matches, prefix an "=" to the term. To negate the term, use '~'.</li>
+      <li>To enforce "exact match" on only one term while allowing other terms to be partial matches, prefix an "=" to the term. </li>
+      <li>To negate a term, (i.e. return all results that do not include the term), prefix a '~' to the term.</li>
     </ul>
     <p>The information listed above is a bit technical. I encourage you to use my "Build Query" tool to assist you. Experiment with it. This search function is extremely powerful.</p>
     <h3>Sharing:</h3>
@@ -229,6 +231,8 @@
     <p>These buttons bring you to your last render state. It stores up to 100 renders in history.</p>
     <h3>Copy text:</h3>
     <p>For now, these only work for text showing on screen. They will copy all Greek or English text to your clipboard when you are verse-display mode.</p>
+    <h3>Contributors:</h3>
+    <p>Ben Holt: Suggestion for arrow key support.</p>
   </div>
   <button class="close-btn" onclick="toggleHelpPopup('helpPopup','helpButton')">Close</button>
 </div>
