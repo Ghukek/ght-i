@@ -2,6 +2,10 @@
   --font-size: 16px;
   --font-size-reduced: 12px;
   --font-size-english: 16px;
+  --lightest-tan: #fdfdf5;
+  --hover-highlight: #f0e9d8;
+  --darker-tan: #e0d4bb;
+  --even-darker-tan: #cbbfa4;
 }
 
 .verse-label {
@@ -24,15 +28,76 @@
 body { 
   font-family: "Times New Roman"; 
   margin: 1rem;
-  background-color: #fdfdf5; /* light off-white */
+  background-color: var(--lightest-tan); /* light off-white */
 }
 
 #header {
-  background-color: #e0d4bb;   /* darker background */
+  background-color: var(--darker-tan);   /* darker background */
   padding: .5rem; 
   padding-top: 1rem;             /* space inside */
   margin-bottom: .5rem;
-  text-align: center;         /* center the content */
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;   /* center children horizontally */
+}
+
+#headerExtras {
+  display: flex;               /* stack children vertically */
+  flex-direction: column;      /* bar on top, content below */
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  text-align: center;
+
+  background-color: var(--darker-tan);
+  border-radius: 5px;
+
+  padding: 0; /* top padding handled in .headerExtrasContent */
+}
+
+.headerExtrasContent {
+  padding-top: .3rem;
+  padding-left: .3rem;
+  padding-right: .3rem;
+  padding-bottom: .3rem;
+}
+
+#headerTitle {
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.collapse-bar-horizontal {
+  height: 1rem;
+  position: relative;   /* relative inside flex column is fine */
+
+  cursor: pointer;
+  background: var(--even-darker-tan);
+  border-radius: 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 9px;
+  user-select: none;
+}
+
+.collapse-bar-horizontal::after {
+  content: '▲'; /* expanded */
+}
+
+#header.collapsed .collapse-bar-horizontal::after {
+  content: '▼';
+}
+
+#header.collapsed .headerExtrasContent {
+  display: none;
+}
+
+.collapse-bar-horizontal:hover {
+  background: var(--even-darker-tan);
 }
 
 #historyButtons {
@@ -92,12 +157,12 @@ body {
 
 /* Default hover */
 .roots:hover, .pcode:hover, .eng:hover, .grk:hover, .col:hover, .verse-label:hover, #toggleGreekHelp:hover {
-  background-color: #f0e9d8;
+  background-color: var(--hover-highlight);
 }
 
 /* Highlighted default background */
 .highlightSearch {
-  background-color: #f0e9d8;
+  background-color: var(--hover-highlight);
 }
 
 /* Override hover when inside .highlightSearch */
@@ -108,11 +173,11 @@ body {
 .highlightSearch .col:hover,
 .highlightSearch .verse-label:hover,
 .highlightSearch #toggleGreekHelp:hover {
-  background-color: #e0d4bb;
+  background-color: var(--darker-tan);
 }
 
 .hi {
-  background: #f0e9d8;
+  background: var(--hover-highlight);
   padding: 0 .15em;
   font-weight: bold;
 }
@@ -154,7 +219,7 @@ select {
 
 .popup {
   position: absolute;
-  background: #fdfdf5;
+  background: var(--lightest-tan);
   border: 1px solid #666;
   padding: 8px;
   border-radius: 6px;
@@ -170,7 +235,7 @@ select {
 .popup {
   display: none;
   position: absolute;
-  background-color: #fdfdf5;
+  background-color: var(--lightest-tan);
   padding: 12px;
   border: 1px solid #ccc;
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -182,7 +247,7 @@ select {
   bottom: 0;
   left: 0;
   width: 100%;
-  background: #fdfdf5;
+  background: var(--lightest-tan);
   padding: 2px 4px;
   border-top: 1px solid #ccc;
   display: flex;
@@ -222,10 +287,11 @@ select {
   display: inline-flex;
   flex-wrap: wrap;        /* allows wrapping onto new lines */
   gap: .2rem;             /* spacing between groups */
-  padding: .3rem;
+  padding: .3rem .8rem .3rem .3rem; /* extra space for collapse bar */
   margin: .1rem;
   border: 1px solid #4B2E1D;
   border-radius: 5px;
+  position: relative;
 }
 
 .head-group {
@@ -256,6 +322,41 @@ select {
   display: flex;         /* row layout */
   flex-wrap: wrap;       /* allow wrapping if screen is narrow */
   gap: 0.5rem;           /* spacing between checkboxes */
+}
+
+.collapse-bar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;          /* this makes it stretch full height */
+  width: .5rem;
+
+  display: flex;
+  align-items: center;      /* vertical center */
+  justify-content: center;  /* horizontal center */
+  font-size: 9px;           /* smaller arrow */
+  line-height: 1;           /* prevent vertical drift */
+  user-select: none;
+
+  cursor: pointer;
+  background: var(--darker-tan);
+  border-radius: 5px;
+}
+
+.collapse-bar::after {
+  content: '❮';  /* default: expanded (click to collapse) */
+}
+
+#headWrapper.collapsed .collapse-bar::after, #headWrapper2.collapsed .collapse-bar::after {
+  content: '❯';
+}
+
+.collapse-bar:hover {
+  background: var(--even-darker-tan);
+}
+
+#headWrapper.collapsed .head-group2:not(.keep-visible), #headWrapper2.collapsed .head-group2:not(.keep-visible) {
+  display: none;
 }
 
 .buttonInDropdown {
@@ -298,13 +399,13 @@ select {
 
 input[type="checkbox"] {
   cursor: pointer;
-  background-color: #fdfdf5
+  background-color: var(--lightest-tan)
 }
 
 input[type="text"],
 input[type="number"],
 select {
-  background-color: #fdfdf5
+  background-color: var(--lightest-tan)
 }
 
 .popup-clickable {
@@ -312,7 +413,7 @@ select {
 }
 
 .popup-clickable:hover {
-  background-color: #f0e9d8; /* light tan, less red */
+  background-color: var(--hover-highlight); /* light tan, less red */
 }
 
 #interlinePopup label {
@@ -341,7 +442,7 @@ button {
 }
 
 #greyFwdBackBtn {
-  background-color: #fdfdf5;
+  background-color: var(--lightest-tan);
 }
 
 button:hover {
@@ -379,7 +480,7 @@ select {
   position: fixed;
   top: 2.5rem;  /* adjust to move it down */
   left: 1rem;  /* adjust to move it to the right */
-  background: #fdfdf5;
+  background: var(--lightest-tan);
   border: 1px solid #ccc;
   padding: 4px;
   z-index: 100;
@@ -399,7 +500,7 @@ select {
 }
 
 .popup.help-popup {
-  background: #fdfdf5;
+  background: var(--lightest-tan);
   border: 1px solid black;
   padding: 15px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -434,7 +535,7 @@ select {
 }
 
 .modal-content {
-  background: #fdfdf5;
+  background: var(--lightest-tan);
   padding: 20px;
   border-radius: 12px;
   width: 100%;           /* <= responsive, never exceeds viewport width */
@@ -464,7 +565,7 @@ select {
 }
 
 .term-row button {
-  background: #f0e9d8;
+  background: var(--hover-highlight);
   border: none;
   border-radius: 4px;
   padding: 4px 8px;

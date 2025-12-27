@@ -23,16 +23,23 @@
     document.head.appendChild(style);
   </script>
 </head>
+<body>
   <div id="header">
-    <h1>GHT Study Tool</h1>
-    <button title="Show help about using the page" id="helpButton" onclick="toggleHelpPopup('helpPopup','helpButton')">Help</button>
-    <button title="Abbreviated info from source introduction." id="readmeButton" onclick="toggleHelpPopup('readmePopup','readmeButton')">Read Me</button>
-    <a href="https://www.wiebefamily.org/GHT.htm" target="_blank" rel="noopener noreferrer">GHT Source</a>&nbsp;(<b id="percentage">0%</b>&nbsp;translated)
-    <br>Data last updated: <b style="color: #bb0000"></i><i id="data_last_updated"></i></b><i> (your local time)</i>
-    <br>Tool last updated: <b style="color: #bb0000"></i><i id="tool_last_updated"></i></b><i> (your local time)</i>
+    <div id="headerExtras">
+      <div class="headerExtrasContent">
+        <h1 id="headerTitle">GHT Study Tool</h1>
+        <button title="Show help about using the page" id="helpButton" onclick="toggleHelpPopup('helpPopup','helpButton')">Help</button>
+        <button title="Abbreviated info from source introduction." id="readmeButton" onclick="toggleHelpPopup('readmePopup','readmeButton')">Read Me</button>
+        <a href="https://www.wiebefamily.org/GHT.htm" target="_blank" rel="noopener noreferrer">GHT Source</a>&nbsp;(<b id="percentage">0%</b>&nbsp;translated)
+        <br>Data last updated: <b style="color: #bb0000"></i><i id="data_last_updated"></i></b><i> (your local time)</i>
+        <br>Tool last updated: <b style="color: #bb0000"></i><i id="tool_last_updated"></i></b><i> (your local time)</i>
+      </div>
+      <div class="collapse-bar-horizontal" onclick="toggleHeader(event)" title="Collapse / Expand header"></div>
+    </div>
   </div>
-  <span class="head-group-wrapper">
-    <span class="head-group2">
+  <span class="head-group-wrapper" id="headWrapper">
+    <span class="collapse-bar" onclick="toggleHeadGroups()" title="Collapse / Expand controls"></span>
+    <span class="head-group2 keep-visible">
       <label>Start Ref: <select id="bookStart" data-id ref-id></select></label>
       <select id="chapterStart" data-id ref-id></select>
       <select id="verseStart" data-id ref-id></select>
@@ -53,7 +60,6 @@
       <button onclick="resetSettings('ref-id')">Reset Reference</button>
     </span>
   </span>
-  <br>
   <span class="head-group">
     Settings:&nbsp;
     <button data-toggle-popup onclick="togglePopup('displayPopup')">Display</button>
@@ -99,17 +105,21 @@
       <button class="buttonInDropdown" onclick="resetSettings('save-id')">Reset Search Settings</button>
     </div>
   </span>
-    <span class="head-group">
+  <span class="head-group">
     Copy text:&nbsp;<button onclick="copyText('grk')">Greek</button>
     <button onclick="copyText('eng')">English</button>
   </span>
   <span class="head-group">
-    Save as URL:&nbsp;<button title="Share current passage selection." onclick="encodeRangeToUrl()">Verse Selection</button>
-    <button title="Share current search term and settings." onclick="saveUrlSearch()">Search Term/Settings</button>
-    <button title="Go back to default URL" onclick="resetUrl()">Reset</button>
+    <button data-toggle-popup onclick="togglePopup('savePopup')">Save as URL</button>
+    <div id="savePopup" class="popup menu-popup">
+      <button title="Share current passage selection." onclick="encodeRangeToUrl()">Verse Selection</button><br>
+      <button title="Share current search term and settings." onclick="saveUrlSearch()">Search Term/Settings</button><br>
+      <button title="Go back to default URL" onclick="resetUrl()">Reset</button>
+    </div>
   </span>
-  <span class="head-group-wrapper">
-    <span class="head-group2">
+  <span class="head-group-wrapper" id="headWrapper2">
+    <span class="collapse-bar" onclick="toggleHeadGroups2()" title="Collapse / Expand controls"></span>
+    <span class="head-group2 keep-visible">
       <input type="text" id="searchInput" placeholder="Enter search term" data-id save-id/>
       <button id="searchBtn" data-id>Search</button>
     </span>
@@ -150,8 +160,10 @@
     <div id="navHeader">
     <button onclick="updateBCV(-3)">◀Book</button>
     <button onclick="updateBCV(-2)">◀Chapter</button>
+    <button onclick="updateBCV(-4)">◀Page</button>
     <button onclick="updateBCV(-1)">◀Verse</button>
     <button onclick="updateBCV(1)">Verse▶</button>
+    <button onclick="updateBCV(4)">Page▶</button>
     <button onclick="updateBCV(2)">Chapter▶</button>
     <button onclick="updateBCV(3)">Book▶</button>
   </div>
@@ -168,10 +180,10 @@
       <a href="http://ghukek.com/ght.html" style="font-size: 0.6em; margin-left: 0.5em;">(More info and contact)</a>
     </h2>
     <h3>Newest feature:</h3>
-    <p>14 Oct: Added helper functions to enable searching within the partially-translated LXX database.</p>
-    <p>26 Oct: Added an option to show all known parsing options and translations for a given Greek word.</p>
-    <p>31 Oct: Added per-term exact match (=) ability and per-term negation (~).</p>
-    <p>31 Oct: Added a search query builder, to provide a more user-friendly search experience.</p>
+    <p>11 Dec: Fixed bug where supplied words were being counted for the total when calculating % translated.</p>
+    <p>17 Dec: Added 'numeral' parsing code to accunt for Rev 13:18 '666'.</p>
+    <p>25 Dec: Added collapsing for the header, the reference group and the search group in consideration of mobile browser screen real estate.</p>
+    <p>25 Dec: Added page navigation buttons that align to the current verse range.</p>
     <h3>Selecting passages by reference:</h3>
     <p>Select your start and end book, chapter, and verse from "Start Ref" and "End Ref". </p>
     <p>You may manually adjust how many verses to show at a time to by changing 'Verse Range'. A 'Verse Range' of '1' will show one verse. </p>

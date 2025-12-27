@@ -37,7 +37,8 @@ const posMap = {
   'RelPro': 'relative pronoun',
   'RefPro': 'reflexive pronoun',
   'Heb': 'Hebrew word',
-  'Aram': 'Aramaic word'
+  'Aram': 'Aramaic word',
+  '#': 'numeral'
 };
 
 const greekToLatin = {
@@ -311,7 +312,7 @@ function getCount() {
         const verse = chapter[v];
         for (let w = 0; w < verse.length; w++) {
           const word = verse[w];
-          if (word.ident !== -1) countWithIdent++;
+          if (word[1][0] !== '[') countWithIdent++;
         }
       }
     }
@@ -1164,7 +1165,7 @@ function render(customVerses = null) {
       if (showGreek)   headerHTML += `<span class="col reference">Greek</span>`;
       if (showEnglish) headerHTML += `<span class="col reference">English</span>`;
       if (showPcode)   headerHTML += `<span class="col reference">Morph</span>`;
-      if (showStrongs) headerHTML += `<span class="col reference">Strongs</span>`;
+      if (showStrongs) headerHTML += `<span class="col reference">Strong's</span>`;
       if (showRoots)   headerHTML += `<span class="col reference">Roots</span>`;
 
       header.innerHTML = headerHTML;
@@ -1987,8 +1988,8 @@ function showPopupTouchEnd(e) {
   const distance = Math.sqrt(dx * dx + dy * dy);
 
   if (elapsed < TAP_MAX_TIME && distance < TAP_MAX_DIST) {
-    e.stopPropagation(); // 👈 Stop bubbling
-    e.preventDefault();  // 👈 Prevent click emulation
+    //e.stopPropagation(); // 👈 Stop bubbling
+    //e.preventDefault();  // 👈 Prevent click emulation
     const popup = document.getElementById("wordPopup");
     const isVisible = window.getComputedStyle(popup).display !== "none";
 
@@ -2814,7 +2815,7 @@ function multiWordSearch(searchStr, lookupInd) {
     matches.push(...lookupMatches); // merge arrays
 
     return matches;// END LXX Helper
-
+    /* Remove comment if removing LXX Helper
     return lookupdb
       .map((value, i) => {
         if (!value) return null;
@@ -2824,6 +2825,7 @@ function multiWordSearch(searchStr, lookupInd) {
         return null;
       })
       .filter(i => i !== null); // <-- explicitly filter null, keeps index 0
+      */
   });
 
   let results = []; 
@@ -3067,6 +3069,15 @@ function updateBCV(delta) {
     }
   }
 
+  else if (Math.abs(delta) === 4) {
+    const step = Math.sign(delta);            // +1 or -1
+    const count = Number(elements.gapInput.value); // how many times
+
+    for (let i = 0; i < count; i++) {
+      updateBCV(step);
+    }
+  }
+
   const enforce = elements.enforceGap.checked;
 
   if (!enforce && chapterCross) {
@@ -3305,6 +3316,32 @@ toggleBtn.addEventListener("click", () => {
     greekImg.style.display = "none";
   }
 });
+
+function toggleHeader(e) {
+  e.stopPropagation();
+  const header = document.getElementById('header');
+  const extras = document.getElementById('headerExtras');
+
+  if (!header.classList.contains('collapsed')) {
+    // before collapsing: lock current width
+    extras.style.width = extras.offsetWidth + 'px';
+  }
+
+  header.classList.toggle('collapsed');
+
+  if (!header.classList.contains('collapsed')) {
+    // when expanding: allow it to auto-size again
+    extras.style.width = '';
+  }
+}
+
+function toggleHeadGroups() {
+  document.getElementById('headWrapper').classList.toggle('collapsed');
+}
+
+function toggleHeadGroups2() {
+  document.getElementById('headWrapper2').classList.toggle('collapsed');
+}
 
 // Load initial data from server.
 loadBaseJson();
