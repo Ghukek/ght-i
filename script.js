@@ -334,6 +334,7 @@ document.querySelectorAll("[data-id]").forEach(el => {
 });
 let lastChanged = null; // Track which selection was last changed (start or end) to use when auto-adjusting selections
 const onOptionsChange = () => {
+  saveSettings();
   if (currentRender === "search") {
     // We are showing search results, so re-run search to apply filters
     searchVerses();
@@ -601,8 +602,9 @@ function initializeSelections() {
     }
 
     // Apply header collapse state
-    const header = document.getElementById('header');
-    header?.classList.toggle('collapsed', settings.headerCollapsed);
+    if (typeof settings.headerCollapsed === 'boolean') {
+      document.getElementById('header')?.classList.toggle('collapsed', settings.headerCollapsed);
+    }
 
     // Apply headgroup collapse states
     setCollapsedHeadGroups(settings.headGroupsCollapsed || []);
@@ -930,6 +932,7 @@ function setFontSize() {
   document.documentElement.style.setProperty("--font-size", size1 + "px");
   document.documentElement.style.setProperty("--font-size-reduced", size2 + "px");
   document.documentElement.style.setProperty("--font-size-english", size3 + "px");
+  saveSettings();
 }
 
 const lookupUnderscore = { // Run reportnonadjacent.py to update this
@@ -2454,6 +2457,7 @@ function refSearch(searchTerm) {
 }
 
 function searchVerses() {
+  saveSettings('save-id');
   const searchTerm = elements.searchInput.value.trim();
   const showContext = elements.showContext.checked;
   const uniqueWords = elements.uniqueWords.checked;
@@ -3360,10 +3364,12 @@ function toggleHeader(e) {
     // when expanding: allow it to auto-size again
     extras.style.width = '';
   }
+  saveSettings();
 }
 
 function toggleHeadGroups(inel) {
   document.getElementById(inel).classList.toggle('collapsed');
+  saveSettings();
 }
 
 function getCollapsedHeadGroups() {
@@ -3404,6 +3410,7 @@ function updatePadding(val) {
 }
 
 slider.addEventListener('input', e => {
+  saveSettings();
   updatePadding(e.target.value);
 });
 
@@ -3417,6 +3424,7 @@ function updateBorder(show) {
 }
 
 borderToggle.addEventListener('change', e => {
+  saveSettings();
   updateBorder(e.target.checked);
 });
 
@@ -3433,6 +3441,7 @@ function updateFont(useSans) {
 }
 
 fontToggle.addEventListener('change', e => {
+  saveSettings();
   updateFont(e.target.checked);
 });
 
