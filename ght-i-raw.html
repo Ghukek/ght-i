@@ -38,20 +38,23 @@
     </div>
   </div>
   <span class="head-group-wrapper" id="headWrapper">
-    <span class="collapse-bar" onclick="toggleHeadGroups()" title="Collapse / Expand controls"></span>
+    <span class="collapse-bar" onclick="toggleHeadGroups('headWrapper')" title="Collapse / Expand controls"></span>
+    <span class="head-group2">
+      <label>Start Ref: </label>
+    </span>
     <span class="head-group2 keep-visible">
-      <label>Start Ref: <select id="bookStart" data-id ref-id></select></label>
+      <select id="bookStart" data-id ref-id></select>
       <select id="chapterStart" data-id ref-id></select>
       <select id="verseStart" data-id ref-id></select>
+      <label title="Select how many verses to show during context searches or when fixing impossible reference range selections." for="gapInput">&nbsp;Show&nbsp;</label>
+      <input id="gapInput" type="number" value="1" min="1" step="1" style="width: 30px;" data-id ref-id save-id>&nbsp;verses
     </span>
     <span class="head-group2">
-      <label title="Select how many verses to show during context searches or when fixing impossible reference range selections." for="gapInput">Verse Range:</label>
-      <input id="gapInput" type="number" value="1" min="1" step="1" style="width: 45px;" data-id ref-id save-id>
       <label title="Force the browser to maintain the selected Verse Range when navigating."><input type="checkbox" id="enforceGap" checked data-id>Fixed</label>&nbsp;
       <button onclick="render()">Load</button>
     </span>
     <span class="head-group2">
-      <label>End Ref:&nbsp; <select id="bookEnd" data-id ref-id></select></label>
+      <label>End Ref:&nbsp;&nbsp; <select id="bookEnd" data-id ref-id></select></label>
       <select id="chapterEnd" data-id ref-id></select>
       <select id="verseEnd" data-id ref-id></select>
     </span>
@@ -82,11 +85,45 @@
       <input id="searchSize" type="number" value="100" min="1" step="1" style="width: 45px;" data-id><br>
       <span title="Font size adjustment." class="head-group3">
         <span>Font Size:</span>
-        <span>Primary:&nbsp;<input id="fontSize" type="number" value="16" min="1" step="1" style="width: 45px;" data-id/></span>
-        <span>Secondary:&nbsp;<input id="fontSize2" type="number" value="12" min="1" step="1" style="width: 45px;" data-id/></span>
-        <label title="When checked, English text will use the secondary font size."><input type="checkbox" id="englishSecondary" data-id> English Secondary</label>
-        <button id="applyFont" onclick="setFontSize()" data-id>Apply</button>
+        <span>
+          Primary:&nbsp;&nbsp;&nbsp;&nbsp;
+          <input id="fontSize" type="range" min="0" max="12" step="1" value="4" data-id>
+        </span>
+        <span>
+          Secondary:
+          <input id="fontSize2" type="range" min="0" max="12" step="1" value="2" data-id>
+        </span>
+        <label title="When checked, English text will use the secondary font size.">
+          <input type="checkbox" id="englishSecondary" data-id>
+          English Secondary
+        </label>
       </span>
+      <div id="paddingControl">
+        <label for="paddingSlider">
+          Word padding:
+        </label>
+        <input
+          type="range"
+          id="paddingSlider"
+          min="0.1"
+          max="0.4"
+          step="0.01"
+          value="0.15"
+          data-id
+        >
+      </div>
+      <div id="borderControl">
+        <label>
+          <input type="checkbox" id="borderToggle" data-id>
+          Show word borders
+        </label>
+      </div>
+      <div id="fontControl">
+        <label>
+          <input type="checkbox" id="fontToggle" data-id>
+          Sans-serif typeface
+        </label>
+      </div>
       <button class="buttonInDropdown" onclick="saveSettings()">Save Display Settings</button><br>
       <button class="buttonInDropdown" onclick="resetSettings()">Reset Display Settings</button><br>
       <label title="Please don't use this for long."><input type="checkbox" id="translitGreek"> Transliterate</label>
@@ -106,10 +143,11 @@
     </div>
   </span>
   <span class="head-group">
-    Copy text:&nbsp;<button onclick="copyText('grk')">Greek</button>
-    <button onclick="copyText('eng')">English</button>
-  </span>
-  <span class="head-group">
+    <button data-toggle-popup onclick="togglePopup('copyPopup')">Copy Text</button>
+    <div id="copyPopup" class="popup menu-popup">
+      <button onclick="copyText('grk')">Greek</button>
+      <button onclick="copyText('eng')">English</button>
+    </div>
     <button data-toggle-popup onclick="togglePopup('savePopup')">Save as URL</button>
     <div id="savePopup" class="popup menu-popup">
       <button title="Share current passage selection." onclick="encodeRangeToUrl()">Verse Selection</button><br>
@@ -118,7 +156,7 @@
     </div>
   </span>
   <span class="head-group-wrapper" id="headWrapper2">
-    <span class="collapse-bar" onclick="toggleHeadGroups2()" title="Collapse / Expand controls"></span>
+    <span class="collapse-bar" onclick="toggleHeadGroups('headWrapper2')" title="Collapse / Expand controls"></span>
     <span class="head-group2 keep-visible">
       <input type="text" id="searchInput" placeholder="Enter search term" data-id save-id/>
       <button id="searchBtn" data-id>Search</button>
@@ -158,14 +196,14 @@
   </div>
   <body>
     <div id="navHeader">
-    <button onclick="updateBCV(-3)">◀Book</button>
+    <!-- <button onclick="updateBCV(-3)">◀Book</button> -->
     <button onclick="updateBCV(-2)">◀Chapter</button>
     <button onclick="updateBCV(-4)">◀Page</button>
     <button onclick="updateBCV(-1)">◀Verse</button>
     <button onclick="updateBCV(1)">Verse▶</button>
     <button onclick="updateBCV(4)">Page▶</button>
     <button onclick="updateBCV(2)">Chapter▶</button>
-    <button onclick="updateBCV(3)">Book▶</button>
+    <!-- <button onclick="updateBCV(3)">Book▶</button> -->
   </div>
   <!-- History Buttons -->
   <div id="historyButtons">
@@ -180,7 +218,6 @@
       <a href="http://ghukek.com/ght.html" style="font-size: 0.6em; margin-left: 0.5em;">(More info and contact)</a>
     </h2>
     <h3>Newest feature:</h3>
-    <p>11 Dec: Fixed bug where supplied words were being counted for the total when calculating % translated.</p>
     <p>17 Dec: Added 'numeral' parsing code to accunt for Rev 13:18 '666'.</p>
     <p>25 Dec: Added collapsing for the header, the reference group and the search group in consideration of mobile browser screen real estate.</p>
     <p>25 Dec: Added page navigation buttons that align to the current verse range.</p>
@@ -232,7 +269,7 @@
     <h3>Copy text:</h3>
     <p>For now, these only work for text showing on screen. They will copy all Greek or English text to your clipboard when you are verse-display mode.</p>
     <h3>Contributors:</h3>
-    <p>Ben Holt: Suggestion for arrow key support.</p>
+    <p>Ben Holt: Suggestion for arrow key support. Discussion prompting typeface selection, word padding slider, and word border selection.</p>
   </div>
   <button class="close-btn" onclick="toggleHelpPopup('helpPopup','helpButton')">Close</button>
 </div>

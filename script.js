@@ -515,11 +515,13 @@ function setupEventListeners() {
     }
   });
 
-  elements.fontSize.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      setFontSize();
-    }
-  });
+  const fontSizeSlider = document.getElementById('fontSize');
+  const fontSize2Slider = document.getElementById('fontSize2');
+  const englishSecondary = document.getElementById('englishSecondary');
+  // Live updates
+  fontSizeSlider.addEventListener('input', setFontSize);
+  fontSize2Slider.addEventListener('input', setFontSize);
+  englishSecondary.addEventListener('change', setFontSize);
 
   elements.searchInput.addEventListener("input", function (e) {
     handleGreekInput(e.target, elements.convertToGreek);
@@ -606,6 +608,11 @@ function initializeSelections() {
   } else {
     elements.gapInput.value = Math.floor(Math.random() * (20 - 2 + 1)) + 2; // random 2–20
   }
+
+  // Initialize display variables after loading settings
+  updatePadding(slider.value);
+  updateBorder(borderToggle.checked);
+  updateFont(fontToggle.checked);
 
   // --- Pick START reference ---
   let startBook, startChapter, startVerse;
@@ -907,10 +914,12 @@ function adjustSelections() {
   }
 }
 
+  const fontSizeScale = [10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40];
+
 function setFontSize() {
-  let size1 = elements.fontSize.value;
-  let size2 = elements.fontSize2.value;
-  let size3 = elements.englishSecondary.checked ? elements.fontSize2.value : elements.fontSize.value;
+  let size1 = fontSizeScale[elements.fontSize.value];
+  let size2 = fontSizeScale[elements.fontSize2.value];
+  let size3 = elements.englishSecondary.checked ? size2 : size1;
   document.documentElement.style.setProperty("--font-size", size1 + "px");
   document.documentElement.style.setProperty("--font-size-reduced", size2 + "px");
   document.documentElement.style.setProperty("--font-size-english", size3 + "px");
@@ -3338,12 +3347,8 @@ function toggleHeader(e) {
   }
 }
 
-function toggleHeadGroups() {
-  document.getElementById('headWrapper').classList.toggle('collapsed');
-}
-
-function toggleHeadGroups2() {
-  document.getElementById('headWrapper2').classList.toggle('collapsed');
+function toggleHeadGroups(inel) {
+  document.getElementById(inel).classList.toggle('collapsed');
 }
 
 document.addEventListener("keydown", function (e) {
@@ -3365,6 +3370,45 @@ document.addEventListener("keydown", function (e) {
     updateBCV(delta);
     e.preventDefault(); // stop page scrolling
   }
+});
+
+const slider = document.getElementById('paddingSlider');
+
+function updatePadding(val) {
+  document.documentElement.style.setProperty('--word-padding', val + 'em');
+}
+
+slider.addEventListener('input', e => {
+  updatePadding(e.target.value);
+});
+
+const borderToggle = document.getElementById('borderToggle');
+
+function updateBorder(show) {
+  document.documentElement.style.setProperty(
+    '--word-border',
+    show ? '1px solid var(--even-darker-tan)' : 'none'
+  );
+}
+
+borderToggle.addEventListener('change', e => {
+  updateBorder(e.target.checked);
+});
+
+const fontToggle = document.getElementById('fontToggle');
+
+const serifFont = '"Times New Roman", serif';
+const sansFont = '"Noto Sans", "Segoe UI", "Arial", sans-serif';
+
+function updateFont(useSans) {
+  document.documentElement.style.setProperty(
+    '--font-family',
+    useSans ? sansFont : serifFont
+  );
+}
+
+fontToggle.addEventListener('change', e => {
+  updateFont(e.target.checked);
 });
 
 // Load initial data from server.
