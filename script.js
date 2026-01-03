@@ -2819,53 +2819,67 @@ function multiWordSearch(searchStr, lookupInd) {
   let count = 0; // how many matches total so far
 
   // Build possible matches for each input word
-  const lookupTerms = terms.map(term => {
+  const lookupTerms = [];
+  const lookupStrength = [];
+
+  for (const term of terms) {
     let normTerm = term;
     const inLookups = lookInLookups(term);
 
     // Start with an array to collect all matches
     let matches = []; // LXX Hhelper only
+    let strength = 0;
+    let hadLookupHit = false;
 
     // Case: Latin, not in lookups, and not normalized → raw term search
     if (!/[α-ω]/i.test(term) && !inLookups && !normalized) {
       const lowerTerm = typeof normTerm === "string" ? normTerm.toLowerCase() : normTerm;
-      return lowerTerm;
-    } else if (/[α-ω]/i.test(term) && !inLookups && term[0] !== '.') { // BEGIN LXX Helper
+      lookupTerms.push(lowerTerm);
+      lookupStrength.push(-lowerTerm.length);
+      continue;
+    }
+   
+    if (/[α-ω]/i.test(term) && !inLookups && term[0] !== '.') { // BEGIN LXX Helper
       matches.push(term);
     } 
     
     // Always add matches from lookupdb
-    const lookupMatches = lookupdb
-      .map((value, i) => {
-        if (!value) return null;
-        if (matchesLookup(term, value)) return i;
-        return null;
-      })
-      .filter(i => i !== null);
+    for (let i = 0; i < lookupdb.length; i++) {
+      const value = lookupdb[i];
+      if (!value) continue;
+      if (matchesLookup(term, value)) {
+        matches.push(i);
+        strength += Number(value[5]) || 0;
+        hadLookupHit = true;
+      }
+    }
 
-    matches.push(...lookupMatches); // merge arrays
+    // No lookup hits → penalty
+    if (!hadLookupHit) {
+      const penaltyBase = matches[0] ?? term;
+      strength = -String(penaltyBase).length;
+    }
 
-    return matches;// END LXX Helper
-    /* Remove comment if removing LXX Helper
-    return lookupdb
-      .map((value, i) => {
-        if (!value) return null;
+    lookupTerms.push(matches);
+    lookupStrength.push(strength);
+  };
 
-        if (matchesLookup(term, value)) return i;
+  const combined = lookupTerms.map((val, i) => ({
+    val,
+    strength: lookupStrength[i]
+  }));
 
-        return null;
-      })
-      .filter(i => i !== null); // <-- explicitly filter null, keeps index 0
-      */
-  });
+  combined.sort((a, b) => a.strength - b.strength);
+
+  const sortedLookupTerms = combined.map(x => x.val);
+  const sortedStrength = combined.map(x => x.strength);
+
+  const shortestLookup = sortedLookupTerms[0];
+
+  console.log(lookupTerms, lookupStrength, shortestLookup);
 
   let results = []; 
   const claimedVerses = new Set();
-
-    // Find the shortest array in lookupTerms
-  const shortestLookup = lookupTerms.reduce((minArr, arr) => {
-    return arr.length < minArr.length ? arr : minArr;
-  }, lookupTerms[0]);
 
   // Scan through verses
   forEachVerse((b, c, v, verseWords) => {
