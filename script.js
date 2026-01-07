@@ -3768,15 +3768,8 @@ function buildPanels(count) {
     div.addEventListener("mousedown", (event) => {
       const target = event.target;
 
-      // Check if the clicked element is a <span class="verse-label">
-      if (target.matches("span.verse-label")) {
-        console.log("Clicked a verse label — do NOT activate the panel");
-        return; // skip activating the panel
-      }
-
-      // Check if the clicked element is a <span> that is a child of <span class="word">
-      if (target.closest("span.word")) {
-        console.log("Clicked inside a word span — do NOT activate the panel");
+      // Check if the clicked element is a <span class="verse-label">  or a <span> within <span class="word">. These are click-to-search and so the user may desire to send the result to the active panel.
+      if (target.matches("span.verse-label") || target.closest("span.word")) {
         return; // skip activating the panel
       }
 
