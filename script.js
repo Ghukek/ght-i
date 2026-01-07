@@ -3748,5 +3748,46 @@ function autoGapInputWidth(el) {
 
 autoGapInputWidth(elements.gapInput);
 
+const outputContainer = document.getElementById("output-container");
+
+function buildPanels(count) {
+  const oldOutput = document.getElementById("output");
+
+  outputContainer.innerHTML = "";
+
+  for (let i = 0; i < count; i++) {
+    const div = document.createElement("div");
+    div.className = "panel";
+
+    if (i === 0 && oldOutput) {
+      div.innerHTML = oldOutput.innerHTML;
+    }
+
+    div.addEventListener("mousedown", () => activate(div));
+    outputContainer.appendChild(div);
+  }
+
+  activate(outputContainer.firstElementChild);
+}
+
+function activate(panel) {
+  const current = document.getElementById("output");
+  if (current) current.removeAttribute("id");
+
+  panel.id = "output";
+}
+
+function setMode(mode) {
+  outputContainer.className = mode;
+
+  if (mode === "one") buildPanels(1);
+  if (mode === "horizontal") buildPanels(2);
+  if (mode === "vertical") buildPanels(2);
+
+  onOptionsChange();
+}
+
+setMode("one");
+
 // Load initial data from server.
 loadBaseJson();

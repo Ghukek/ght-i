@@ -674,3 +674,34 @@ select {
   box-sizing: border-box;
 }
 
+#output-container {
+  display: grid;
+  gap: 2px;
+  height: 100%;
+}
+
+#output-container.one {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+#output-container.horizontal {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+#output-container.vertical {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.panel {
+  border: 1px solid #aaa;
+  padding: 2px;
+  overflow: auto;
+  cursor: pointer;
+}
+
+.panel#output {
+  outline: 2px solid var(--even-darker-tan);
+}

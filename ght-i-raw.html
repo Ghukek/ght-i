@@ -172,6 +172,12 @@
       <button title="Share current search term and settings." onclick="saveUrlSearch()">Search Term/Settings</button><br>
       <button title="Go back to default URL" onclick="resetUrl()">Reset</button>
     </div>
+    <button data-toggle-popup onclick="togglePopup('panelPopup')">Panels</button>
+    <div id="panelPopup" class="popup menu-popup">
+      <button onclick="setMode('one')">One</button>
+      <button onclick="setMode('horizontal')">Side-by-side</button>
+      <button onclick="setMode('vertical')">Stacked</button>
+    </div>
   </span>
   <span class="head-group-wrapper" id="headWrapper2">
     <span class="head-group2 keep-visible">
@@ -207,8 +213,9 @@
     </span>
     <span class="collapse-bar" onclick="toggleHeadGroups('headWrapper2')" title="Collapse / Expand controls"></span>
   </span>
-  test
-  <div id="output"></div>
+  <div id="output-container" class="one">
+    <div class="panel" id="output"></div>
+  </div>
   <div id="wordPopup" class="popup"
       onmouseover="cancelHidePopup()"
       onmouseout="hidePopup()">
