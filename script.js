@@ -250,6 +250,7 @@ function loadBaseJson() {
     initPickers();
     setupEventListeners();
     setFontSize();
+    setMode();
     if (currentRender === "search") {
       searchVerses();
     } else {
@@ -294,6 +295,7 @@ function loadBaseJson() {
     initPickers();
     setupEventListeners();
     setFontSize();
+    setMode();
     if (currentRender === "search") {
       searchVerses();
     } else {
@@ -3766,7 +3768,7 @@ function buildPanels(count) {
     div.addEventListener("mousedown", () => activate(div));
     outputContainer.appendChild(div);
   }
-
+  updatePanelHeight();
   activate(outputContainer.firstElementChild);
 }
 
@@ -3777,17 +3779,56 @@ function activate(panel) {
   panel.id = "output";
 }
 
-function setMode(mode) {
-  outputContainer.className = mode;
+function setMode(changed = null) {
+  if (changed === "vert" && elements.vertPanel.checked) {
+    elements.horizPanel.checked = false;
+  } else if (changed === "horiz" && elements.horizPanel.checked) {
+    elements.vertPanel.checked = false;
+  }
 
-  if (mode === "one") buildPanels(1);
-  if (mode === "horizontal") buildPanels(2);
-  if (mode === "vertical") buildPanels(2);
+  if (elements.horizPanel.checked) {
+    outputContainer.className = "horizontal";
+    buildPanels(2);
+  } else if (elements.vertPanel.checked) {
+    outputContainer.className = "vertical";
+    buildPanels(2);
+  } else {
+    outputContainer.className = "one";
+    buildPanels(1);
+  }
 
   onOptionsChange();
 }
 
-setMode("one");
+function updatePanelHeight() {
+  const isMobile = elements.smallScreen.checked;
+  let height;
+
+  if (isMobile) {
+    // On mobile: ~90% of viewport
+    height = Math.round(window.innerHeight * 0.9);
+  } else {
+    const bottomEl = document.getElementById("headWrapper2");
+    const topEl = document.getElementById("navHeader");
+
+    if (bottomEl && topEl) {
+      const bottomOfBottomEl = bottomEl.getBoundingClientRect().bottom;
+      const topOfTopEl = topEl.getBoundingClientRect().top;
+      console.log(bottomOfBottomEl, topOfTopEl)
+      height = Math.max(0, topOfTopEl - bottomOfBottomEl - 4);
+    } else {
+      // Fallback if either element is missing
+      height = window.innerHeight;
+    }
+  }
+
+  // Apply height via CSS variable
+  document.documentElement.style.setProperty("--panel-height", `${height}px`);
+}
+
+window.addEventListener("resize", updatePanelHeight);
+window.addEventListener("orientationchange", updatePanelHeight);
+document.addEventListener("DOMContentLoaded", updatePanelHeight);
 
 // Load initial data from server.
 loadBaseJson();

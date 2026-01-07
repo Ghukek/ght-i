@@ -12,6 +12,7 @@
   --word-border: 1px solid var(--brown);
   --book-width: 60px;
   --number-width: 40px;
+  --panel-height: auto;
 }
 
 .verse-label {
@@ -37,6 +38,7 @@ body {
   font-family: var(--font-family);; 
   margin: 1rem;
   background-color: var(--lightest-tan); /* light off-white */
+  margin-bottom: 28px;
 }
 
 #header {
@@ -193,16 +195,6 @@ body {
 .grk, .eng, .pcode, .roots {
   display: inline; /* stack vertically inside the word */
   text-align: center;
-}
-
-#output {
-  padding-bottom: 50px; /* add enough space to avoid being hidden behind #navHeader */
-  padding-top: 0.5em;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  white-space: normal;
-  font-size: var(--font-size);
 }
 
 .verse {
@@ -677,7 +669,8 @@ select {
 #output-container {
   display: grid;
   gap: 2px;
-  height: 100%;
+  height: var(--panel-height);
+  max-height: var(--panel-height);
 }
 
 #output-container.one {
@@ -700,6 +693,16 @@ select {
   padding: 2px;
   overflow: auto;
   cursor: pointer;
+  height: var(--panel-height) - 4px;
+  /* from #output */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  white-space: normal;
+  font-size: var(--font-size);
+  /* end from #output */
+  align-content: flex-start;    /* top-align all rows */
+  justify-content: flex-start;  /* left-align items */
 }
 
 .panel#output {
