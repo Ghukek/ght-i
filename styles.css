@@ -230,6 +230,8 @@ select {
   display: none;
   user-select: none; /* prevent accidental text selection on hover */
   font-family: var(--font-family);
+  max-height: 80vh;          /* max popup height relative to viewport */
+  overflow-y: auto;          /* make content scrollable */
 }
 
 #navHeader {
@@ -284,13 +286,8 @@ select {
   position: relative;
 }
 
-.head-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  padding: .2rem;
-  margin: .1rem;
-  border: 1px solid var(--brown);
-  border-radius: 3px;
+#headWrapper3 {
+  padding: .3rem;
 }
 
 .head-group2 {

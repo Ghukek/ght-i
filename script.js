@@ -104,41 +104,51 @@ function toLatin(str) {
 
 // Options popups.
 function togglePopup(id) {
-  // Close any open popups first
+  // Close any other popups
   document.querySelectorAll('.popup').forEach(p => {
     if (p.id !== id) p.style.display = 'none';
   });
 
   const popup = document.getElementById(id);
   const isVisible = window.getComputedStyle(popup).display !== 'none';
-
   if (isVisible) {
     popup.style.display = 'none';
     return;
   }
 
-  // Determine preferred display type
+  // Show popup first (block or grid)
   const displayType = popup.classList.contains('ref-popup') ? 'grid' : 'block';
   popup.style.display = displayType;
-  // Force layout so offsetWidth is correct
+
+  // Force layout
   popup.getBoundingClientRect();
 
+  // Get button
   const button = document.querySelector(`[data-toggle-popup][onclick*="'${id}'"]`);
   if (button) {
     const rect = button.getBoundingClientRect();
-    popup.style.top = `${rect.bottom + window.scrollY}px`;
+    const viewportHeight = window.innerHeight;
 
+    // Position below button initially
+    let top = rect.bottom + window.scrollY;
+
+    // Adjust max height so popup doesn't overflow viewport
+    const maxHeight = viewportHeight - rect.bottom - 18; // 10px margin
+    popup.style.maxHeight = `${maxHeight}px`;
+
+    popup.style.top = `${top}px`;
+
+    // Horizontal positioning
     let left = rect.left + window.scrollX;
     const popupWidth = popup.offsetWidth || 280;
     const viewportWidth = document.documentElement.clientWidth;
-
     if (left + popupWidth > viewportWidth) {
-      left = viewportWidth - popupWidth;
+      left = viewportWidth - popupWidth - 10; // 10px margin
     }
-
     popup.style.left = `${left}px`;
   }
 }
+
 
 function toggleHelpPopup(pop, but) {
   const popup = document.getElementById(pop);
@@ -843,24 +853,7 @@ function initializeSelections() {
   const settings = JSON.parse(localStorage.getItem("userSettings"));
 
   if (settings) {
-    for (const [key, value] of Object.entries(settings)) {
-      const el = elements[key] || document.getElementById(key);
-      if (!el) continue;
-
-      if (el.type === "checkbox" || el.type === "radio") {
-        el.checked = value;
-      } else if ("value" in el) {
-        el.value = value;
-      }
-    }
-
-    // Apply header collapse state
-    if (typeof settings.headerCollapsed === 'boolean') {
-      document.getElementById('header')?.classList.toggle('collapsed', settings.headerCollapsed);
-    }
-
-    // Apply headgroup collapse states
-    setCollapsedHeadGroups(settings.headGroupsCollapsed || []);
+    loadSettings(settings);
   }
 
   if (range?.gapInput > 0) {
@@ -1415,10 +1408,29 @@ function render(customVerses = null) {
   const container = document.getElementById("output");
   container.innerHTML = "";
 
+  // Get Reference Start, Verse Range, and Search String
+
+  const bookStart = parseInt(elements.bookStart.value);
+  const chapterStart = parseInt(elements.chapterStart.value);
+  const verseStart = parseInt(elements.verseStart.value);
+  const bookEnd = parseInt(elements.bookEnd.value);
+  const chapterEnd = parseInt(elements.chapterEnd.value);
+  const verseEnd = parseInt(elements.verseEnd.value);
+  const currentSearch = elements.searchInput.value.trim();
+  const gapInput = parseInt(elements.gapInput.value, 10) || 1;
+  // Store on container (not visible)
+  container.dataset.bookStart = bookStart;
+  container.dataset.chapterStart = chapterStart;
+  container.dataset.verseStart = verseStart;
+  container.dataset.bookEnd = bookEnd;
+  container.dataset.chapterEnd = chapterEnd;
+  container.dataset.verseEnd = verseEnd;
+  container.dataset.search = currentSearch;
+  container.dataset.gap = gapInput;
+
   const { showGreek, showEnglish, showPcode, showStrongs, showRoots } = getDisplayOptions();
   let showVerses = elements.showVerses.checked;
   const reverseInterlinear = elements.reverseInterlinear.checked;
-  const newlineAfterVerse = elements.newlineAfterVerse.checked;
   const altSearch = elements.altSearch.checked;
 
   let passUnderscore = null;
@@ -1635,13 +1647,6 @@ function render(customVerses = null) {
   }
 
   // Otherwise, existing logic with user-selected start/end refs
-  const bookStart = parseInt(elements.bookStart.value);
-  const chapterStart = parseInt(elements.chapterStart.value);
-  const verseStart = parseInt(elements.verseStart.value);
-  const bookEnd = parseInt(elements.bookEnd.value);
-  const chapterEnd = parseInt(elements.chapterEnd.value);
-  const verseEnd = parseInt(elements.verseEnd.value);
-
   contextBool = false;
 
   let lastBook = null;
@@ -2351,6 +2356,29 @@ function resetSettings(targetAttr = null) {
   location.reload();
 }
 
+function loadSettings(settings, pageload=true) {
+    for (const [key, value] of Object.entries(settings)) {
+    const el = elements[key] || document.getElementById(key);
+    if (!el) continue;
+
+    if (el.type === "checkbox" || el.type === "radio") {
+      el.checked = value;
+    } else if ("value" in el) {
+      el.value = value;
+    }
+  }
+
+  if (pageload) {
+    // Apply header collapse state
+    if (typeof settings.headerCollapsed === 'boolean') {
+      document.getElementById('header')?.classList.toggle('collapsed', settings.headerCollapsed);
+    }
+
+    // Apply headgroup collapse states
+    setCollapsedHeadGroups(settings.headGroupsCollapsed || []);
+  }
+}
+
 function parseMorphTag(tag) {
   const tenseMap = {
     'P': 'present', 'I': 'imperfect', 'F': 'future', 'A': 'aorist',
@@ -2845,16 +2873,17 @@ function handleLookupMatches(searchTerm, matches) {
     }
   }
 
-  if (morphMatches.length === 0) return;
-
   // if we're in uniqueWords mode we’re done
   if (uniqueWords) {
     // add boundary marker if we have more than one page
     if (searchState.boundaries.length <= searchState.page + 1 && count > endIndex) {
       searchState.boundaries.push(endIndex);
-    }
+    } 
+    // At some point I need to add sorting for unique words. In order to do that, I need to move the pagination down here.
     return;
   }
+
+  if (morphMatches.length === 0) return;
 
   let exact = elements.exactMatch.checked; // BEGIN LXX Helper
   if (searchTerm.startsWith('=')) {
@@ -3643,11 +3672,13 @@ function toggleHeader(e) {
     // when expanding: allow it to auto-size again
     extras.style.width = '';
   }
+  updatePanelHeight()
   saveSettings();
 }
 
 function toggleHeadGroups(inel) {
   document.getElementById(inel).classList.toggle('collapsed');
+  updatePanelHeight()
   saveSettings();
 }
 
@@ -3769,8 +3800,10 @@ function buildPanels(count) {
       const target = event.target;
 
       // Check if the clicked element is a <span class="verse-label">  or a <span> within <span class="word">. These are click-to-search and so the user may desire to send the result to the active panel.
-      if (target.matches("span.verse-label") || target.closest("span.word")) {
-        return; // skip activating the panel
+      if (target.matches("span.verse-label") || target.closest("span.word") || target.closest("div.word-row span[class^='col']")) {
+        if (!target.closest("div.word-row.word-header")) {
+          return; // Skip chaning the active panel unless in a header row.
+        }
       }
 
       // Otherwise, activate the panel
@@ -3782,11 +3815,29 @@ function buildPanels(count) {
   activate(outputContainer.firstElementChild);
 }
 
+function restoreStateFromPanel(panel) {
+  const d = panel.dataset;
+
+  if (d.bookStart    !== undefined) elements.bookStart.value    = d.bookStart;
+  if (d.chapterStart !== undefined) elements.chapterStart.value = d.chapterStart;
+  if (d.verseStart   !== undefined) elements.verseStart.value   = d.verseStart;
+
+  if (d.bookEnd      !== undefined) elements.bookEnd.value      = d.bookEnd;
+  if (d.chapterEnd   !== undefined) elements.chapterEnd.value   = d.chapterEnd;
+  if (d.verseEnd     !== undefined) elements.verseEnd.value     = d.verseEnd;
+
+  if (d.search       !== undefined) elements.searchInput.value  = d.search;
+  if (d.gap          !== undefined) elements.gapInput.value     = d.gap;
+  updateDisplay(); // Update the ref button displays.
+}
+
 function activate(panel) {
   const current = document.getElementById("output");
   if (current) current.removeAttribute("id");
 
   panel.id = "output";
+
+  restoreStateFromPanel(panel);
 }
 
 function setMode(changed = null) {
