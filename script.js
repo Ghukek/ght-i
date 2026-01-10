@@ -1926,6 +1926,21 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
       wordEl.appendChild(spaceSpan);
     }
 
+    if (showEnglish && pEng && reverseInterlinear) {
+      if (elements.customFormat.checked) {
+        wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
+      } else {
+        wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
+      }
+      hasContent = true;
+    } else if (showEnglish && reverseInterlinear) {
+      // Add a non-clickable space span for layout consistency
+      const spaceSpan = document.createElement('span');
+      spaceSpan.className = "eng";
+      spaceSpan.textContent = '\u00A0';
+      wordEl.appendChild(spaceSpan);
+    }
+
     if (showGreek && grk) {
       if (elements.uncialGreek.checked) {
         grk = toGreek(grk).toUpperCase();
@@ -1939,14 +1954,14 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
       wordEl.appendChild(spaceSpan);
     }
 
-    if (showEnglish && pEng) {
+    if (showEnglish && pEng && !reverseInterlinear) {
       if (elements.customFormat.checked) {
         wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
       } else {
         wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
       }
       hasContent = true;
-    } else if (showEnglish) {
+    } else if (showEnglish && !reverseInterlinear) {
       // Add a non-clickable space span for layout consistency
       const spaceSpan = document.createElement('span');
       spaceSpan.className = "eng";
