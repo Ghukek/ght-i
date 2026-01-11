@@ -260,7 +260,7 @@ function loadBaseJson() {
     initPickers();
     setupEventListeners();
     setFontSize();
-    setMode();
+    setMode("init");
     if (currentRender === "search") {
       searchVerses();
     } else {
@@ -305,7 +305,7 @@ function loadBaseJson() {
     initPickers();
     setupEventListeners();
     setFontSize();
-    setMode();
+    setMode("init");
     if (currentRender === "search") {
       searchVerses();
     } else {
@@ -966,8 +966,8 @@ function initializeSelections() {
   applyUrlSearch();
 
   // Initialize panel ref/search based on saved/random data.
-  for (let i = 1; i < maxPanels; i++) {
-    storePanelState(0);
+  for (let i = 0; i < maxPanels; i++) {
+    storePanelState(i);
   }
 }
 
@@ -3906,8 +3906,96 @@ function loadPanelState(panelID) {
   updateDisplay();
 }
 
+function attachResize(divider) {
+  let startPos = 0;
+  let startSizes = null;
+  let isHorizontal = true;
+
+  function onMove(pos) {
+    if (isHorizontal) {
+      const total = startSizes.left + startSizes.right;
+      let newLeft = startSizes.left + pos - startPos;
+      newLeft = Math.max(80, Math.min(newLeft, total - 80));
+      const newRight = total - newLeft;
+      outputContainer.style.gridTemplateColumns = `${newLeft}px 6px ${newRight}px`;
+    } else {
+      const total = startSizes.top + startSizes.bottom;
+      let newTop = startSizes.top + pos - startPos;
+      newTop = Math.max(80, Math.min(newTop, total - 80));
+      const newBottom = total - newTop;
+      outputContainer.style.gridTemplateRows = `${newTop}px 6px ${newBottom}px`;
+    }
+  }
+
+  function onMouseMove(e) {
+    onMove(isHorizontal ? e.clientX : e.clientY);
+  }
+
+  function onTouchMove(e) {
+    if (e.touches.length > 0) {
+      onMove(isHorizontal ? e.touches[0].clientX : e.touches[0].clientY);
+    }
+  }
+
+  function onUp() {
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onUp);
+    document.removeEventListener("touchmove", onTouchMove);
+    document.removeEventListener("touchend", onUp);
+  }
+
+  function startDrag(posEvent) {
+    isHorizontal = outputContainer.classList.contains("horizontal");
+    startPos = isHorizontal
+      ? posEvent.clientX || posEvent.touches[0].clientX
+      : posEvent.clientY || posEvent.touches[0].clientY;
+
+    const panels = outputContainer.querySelectorAll(".panel");
+    if (isHorizontal) {
+      startSizes = {
+        left: panels[0].offsetWidth,
+        right: panels[1].offsetWidth
+      };
+    } else {
+      startSizes = {
+        top: panels[0].offsetHeight,
+        bottom: panels[1].offsetHeight
+      };
+    }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onUp);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onUp);
+  }
+
+  divider.addEventListener("mousedown", startDrag);
+  divider.addEventListener("touchstart", e => {
+    e.preventDefault(); // Prevent scrolling
+    startDrag(e);
+  }, { passive: false });
+}
+
+
+function resetPanelLayout() {
+  outputContainer.style.gridTemplateColumns = "";
+  outputContainer.style.gridTemplateRows = "";
+
+  if (outputContainer.classList.contains("horizontal")) {
+    outputContainer.style.gridTemplateColumns = "1fr 6px 1fr";
+    outputContainer.style.gridTemplateRows = "1fr";
+  }
+
+  if (outputContainer.classList.contains("vertical")) {
+    outputContainer.style.gridTemplateRows = "1fr 6px 1fr";
+    outputContainer.style.gridTemplateColumns = "1fr";
+  }
+}
+
 function buildPanels(count) {
   const oldOutput = document.getElementById("output");
+
+  resetPanelLayout();
 
   outputContainer.innerHTML = "";
 
@@ -3934,6 +4022,13 @@ function buildPanels(count) {
       activate(div);
     });
     outputContainer.appendChild(div);
+
+    if (i < count - 1) {
+      const divider = document.createElement("div");
+      divider.className = "divider";
+      outputContainer.appendChild(divider);
+      attachResize(divider);
+    }
   }
   updatePanelHeight();
   for (let i = 1; i < count; i++) { // Start at 1 because first panel is already loaded properly on init.
@@ -3948,7 +4043,7 @@ function buildPanels(count) {
 
 function activate(panel) {
   const current = document.getElementById("output");
-  if (current) current.removeAttribute("id");
+  if (current) current.id = "notput";
 
   panel.id = "output";
 
@@ -3957,6 +4052,9 @@ function activate(panel) {
 }
 
 function setMode(changed = null) {
+  if (changed !== "init") {
+    togglePopup("panelPopup") 
+  }
   if (changed === "vert" && elements.vertPanel.checked) {
     elements.horizPanel.checked = false;
   } else if (changed === "horiz" && elements.horizPanel.checked) {
