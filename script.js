@@ -406,8 +406,11 @@ function saveState() {
     else state[id] = el.value;
   });
 
+  state['centerScroll'] = centerFromSearch;
+  state['currentRender'] = currentRender;
+
   // Do not save if identical to current
-  if (index >= 0 && statesEqual(stack[index].state, state)) {
+  if (index >= 0 && statesEqual(stack[index], state)) {
     return;
   }
 
@@ -417,7 +420,7 @@ function saveState() {
   }
 
   // Push new state
-  stack.push({ state, currentRender });
+  stack.push(state);
   index++;
 
   // Limit to 100
@@ -454,7 +457,7 @@ function loadState(panelID, index) {
   if (targetPanel !== originalPanel) {
     activate(targetPanel);
   }
-  const { state, currentRender: renderMode } = stack[index];
+  const state = stack[index];
 
   Object.keys(state).forEach(id => {
     const el = elements[id];
@@ -470,10 +473,13 @@ function loadState(panelID, index) {
     }
   });
 
+  centerFromSearch = state['centerScroll'];
+  currentRender = state['currentRender']
+
   historyIndexes[panelID] = index;
 
   // Trigger appropriate re-run
-  if (renderMode === "search") searchVerses();
+  if (currentRender === "search") searchVerses();
   else render();
   if (originalPanel && targetPanel !== originalPanel) {
     activate(originalPanel);
@@ -1065,9 +1071,9 @@ function initializeSelections() {
   applyUrlSearch();
 
   // Initialize panel ref/search based on saved/random data.
-  for (let i = 0; i < maxPanels; i++) {
-    storePanelState(i);
-  }
+  //for (let i = 0; i < maxPanels; i++) {
+  //  storePanelState(i);
+  //}
 }
 
 // Helper function to pad numbers for url encoding
@@ -1517,6 +1523,7 @@ function insertFwdBack(container) {
   container.appendChild(btnWrapper);
 }
 
+let centerFromSearch = false;
 let currentRender = "reference"; // used to track current rendering mode, changed in render()
 function render(customVerses = null, inDouble = false) {
   if (customVerses && Array.isArray(customVerses)) {
@@ -1536,7 +1543,8 @@ function render(customVerses = null, inDouble = false) {
   saveState()
   const container = document.getElementById("output");
   container.innerHTML = "";
-  storePanelState(container.dataset.panelID);
+  container.scrollTop = 0; // reset scroll to top
+  //storePanelState(container.dataset.panelID);
 
   const { showGreek, showEnglish, showPcode, showStrongs, showRoots } = getDisplayOptions();
   let showVerses = elements.showVerses.checked;
@@ -1807,6 +1815,11 @@ function render(customVerses = null, inDouble = false) {
     }
   }
   elements.gapInput.value = count;
+  if (centerFromSearch) {
+    container.scrollTop = (container.scrollHeight - container.clientHeight) / 2;
+    centerFromSearch = false;
+  }
+  return;
 }
 //TEMPMARKER
 function createClickableSpan(className, text, wordEl) {
@@ -2959,11 +2972,13 @@ function refSearch(searchTerm) {
     // Reference search
   const ref = tryParseReference(searchTerm);
   if (ref) {
+    if (elements.centerRange.checked) centerFromSearch = true;
     setReferenceRange(ref);
     updateDisplay();
     render();
-    return;
+    return true;
   }
+  return false;
 }
 
 function searchVerses() {
@@ -2992,13 +3007,7 @@ function searchVerses() {
   }
 
   // Reference search
-  const ref = tryParseReference(searchTerm);
-  if (ref) {
-    setReferenceRange(ref);
-    updateDisplay();
-    render();
-    return;
-  }
+  if (refSearch(searchTerm)) return
 
   if (searchTerm.includes(" ") || showContext) {
     const matches = multiWordSearch(searchTerm);
@@ -4004,6 +4013,7 @@ const outputContainer = document.getElementById("output-container");
 const panelState = {};
 const maxPanels = 1; // Zero-based max panels. Change this if going from 2 panels.
 
+// Removed due to being redundant to historyStacks
 function storePanelState(panelID) {
   panelState[panelID] = {
     bookStart: parseInt(elements.bookStart.value),
@@ -4017,9 +4027,12 @@ function storePanelState(panelID) {
     currentRender: currentRender
   };
 }
+// End removed.
 
 function loadPanelState(panelID) {
-  const state = panelState[panelID];
+  //console.log(historyStacks[panelID][historyIndexes[panelID]])
+  const state = historyStacks[panelID][historyIndexes[panelID]];
+  //const state = panelState[panelID];
   if (!state) return;
 
   elements.bookStart.value = state.bookStart;
@@ -4028,8 +4041,8 @@ function loadPanelState(panelID) {
   elements.bookEnd.value = state.bookEnd;
   elements.chapterEnd.value = state.chapterEnd;
   elements.verseEnd.value = state.verseEnd;
-  elements.searchInput.value = state.search;
-  elements.gapInput.value = state.gap;
+  elements.searchInput.value = state.searchInput;
+  elements.gapInput.value = state.gapInput;
   currentRender = state.currentRender;
   updateDisplay();
 }
@@ -4165,11 +4178,12 @@ function buildPanels(count) {
     }
   }
   updatePanelHeight();
-  for (let i = 1; i < count; i++) { // Start at 1 because first panel is already loaded properly on init.
+  for (let i = 0; i < count; i++) { // Start at 1 because first panel is already loaded properly on init.
     const panel = outputContainer.querySelector(`[data-panel-i-d="${i}"]`);
     if (panel) {
       activate(panel);
-      onOptionsChange();
+      if (historyIndexes[i] === -1) onOptionsChange();
+      else loadState(i, historyIndexes[i])
     }
   }
   activate(outputContainer.firstElementChild);
