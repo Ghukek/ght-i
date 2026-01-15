@@ -727,6 +727,10 @@ select {
   z-index: 10;
 }
 
+.divider:hover {
+  background: var(--darker-tan);
+}
+
 #output-container.horizontal .divider {
   cursor: col-resize;
   width: 6px;
@@ -740,10 +744,11 @@ select {
 }
 
 .panel#output {
-  outline: 2px solid var(--even-darker-tan);
+  outline: 2px solid var(--brown);
 }
 
 #notput {
   position: relative;
   background: var(--tint-2);
+  outline: 2px dotted var(--brown)
 }

@@ -4083,6 +4083,10 @@ function attachResize(divider) {
     document.removeEventListener("mouseup", onUp);
     document.removeEventListener("touchmove", onTouchMove);
     document.removeEventListener("touchend", onUp);
+
+    // Re-enable text selection
+    document.body.style.userSelect = "";
+    document.body.style.pointerEvents = "";
   }
 
   function startDrag(posEvent) {
@@ -4103,6 +4107,11 @@ function attachResize(divider) {
         bottom: panels[1].offsetHeight
       };
     }
+
+    // Disable text selection while dragging
+    document.body.style.userSelect = "none";
+    // Optional: disable pointer events for iframes or other overlays
+    document.body.style.pointerEvents = "none";
 
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onUp);
