@@ -764,6 +764,7 @@ function buildChapters(prefix, bookIndex) {
   if (!col) return;
 
   col.innerHTML = "";
+  col.scrollTop = 0;
 
   const bookLabel = getBookLabel(bookIndex);
   col.appendChild(makeHeaderSpacerFromColumn(col, bookLabel));
@@ -785,6 +786,7 @@ function buildVerses(prefix, bookIndex, chapIndex) {
   if (!col) return;
 
   col.innerHTML = "";
+  col.scrollTop = 0;
 
   const headerText = `${getBookLabel(bookIndex)} ${parseInt(chapIndex) + 1}`;
   col.appendChild(makeHeaderSpacerFromColumn(col, headerText));
@@ -2048,6 +2050,14 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
       wordEl.appendChild(createClickableSpan("pcode", value, wordEl));
     }
 
+    function appendEng(wordEl, pEng) {
+      if (elements.customFormat.checked) {
+        wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
+      } else {
+        wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
+      }
+    }
+
     function appendSpacer(wordEl, className = null) {
       const span = document.createElement('span');
       if (className) span.className = className;
@@ -2055,29 +2065,24 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
       wordEl.appendChild(span);
     }
 
-    if (showStrongs) {
-      if (strongs) {
-        appendPcode(wordEl, strongs);
-        hasContent = true;
-      } else {
-        appendSpacer(wordEl, "pcode");
-      }
-    }
 
-    if (showPcode) {
-      if (pcode) {
-        appendPcode(wordEl, pcode);
-        hasContent = true;
-      } else {
-        appendSpacer(wordEl, "pcode");
+    if (!reverseInterlinear) {
+      if (showStrongs) {
+        if (strongs) {
+          appendPcode(wordEl, strongs);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "pcode");
+        }
       }
-    }
 
-    function appendEng(wordEl, pEng) {
-      if (elements.customFormat.checked) {
-        wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
-      } else {
-        wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
+      if (showPcode) {
+        if (pcode) {
+          appendPcode(wordEl, pcode);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "pcode");
+        }
       }
     }
 
@@ -2122,6 +2127,26 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
           hasContent = true;
         } else {
           appendSpacer(wordEl, "eng");
+        }
+      }
+    }
+
+    if (reverseInterlinear) {
+      if (showPcode) {
+        if (pcode) {
+          appendPcode(wordEl, pcode);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "pcode");
+        }
+      }
+
+      if (showStrongs) {
+        if (strongs) {
+          appendPcode(wordEl, strongs);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "pcode");
         }
       }
     }
@@ -2544,7 +2569,7 @@ function saveSettings(targetAttr = null) {
   saveAllSettings(data);
 }
 
-function resetSettings(targetAttr = null) {
+function resetSettings(targetAttr = null, panelOnly = null) {
   const panelId = getActivePanelId();
   const data = loadAllSettings();
 
@@ -2561,14 +2586,16 @@ function resetSettings(targetAttr = null) {
 
     // Delete from settings
     if (el.hasAttribute("global-setting")) {
-      delete globalSettings[key];
+      if (!panelOnly) delete globalSettings[key];
     } else {
       delete panelSettings[key];
     }
   }
 
-  delete globalSettings.headerCollapsed;
-  delete globalSettings.headGroupsCollapsed;
+  if (!panelOnly) {p
+    delete globalSettings.headerCollapsed;
+    delete globalSettings.headGroupsCollapsed;
+  }
 
   // Save updated settings back
   if (Object.keys(panelSettings).length === 0) delete data.panels[panelId];
@@ -3680,7 +3707,7 @@ function copyText(mode) {
   // Traverse in natural DOM order
   output.querySelectorAll(".verse-label, .word .grk, .word .eng").forEach(span => {
     if (span.classList.contains("verse-label")) {
-      texts.push(span.textContent.trim());
+      texts.push('[' + span.textContent.trim() + ']');
     } else if (mode === "grk" && span.classList.contains("grk")) {
       texts.push(span.textContent.trim());
     } else if (mode === "eng" && span.classList.contains("eng")) {

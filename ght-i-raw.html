@@ -112,7 +112,7 @@
       </label>
     </div>
     <!-- <button class="buttonInDropdown" onclick="saveSettings()">Save Display Settings</button><br> -->
-    <button class="buttonInDropdown" onclick="resetSettings()">Reset Current Panel</button><br>
+    <button class="buttonInDropdown" onclick="resetSettings(null, true)">Reset Current Panel</button><br>
     <button class="buttonInDropdown" onclick="dumpAllSettings()">Reset ALL Settings</button>
   </div>
   <div id="searchPopup" class="popup menu-popup">
@@ -125,7 +125,7 @@
     <label title="Phrase Search: Only show words when they are adjacent."><input id="adjacent" type="checkbox" data-id save-id> Adjacent</label><br>
     <label title="Will find combining morphology letters when checked."><input id="expandMorph" type="checkbox" data-id save-id checked> ExpandMorph</label><br>
     <!-- <button class="buttonInDropdown" onclick="saveSettings('save-id')">Save Search Settings</button><br> -->
-    <button class="buttonInDropdown" onclick="resetSettings('save-id')">Reset Search Settings</button>
+    <button class="buttonInDropdown" onclick="resetSettings('save-id', true)">Reset Search Settings</button>
   </div>
   <div id="panelPopup" class="popup menu-popup">
     <label title="Adds a second panel to the right of the first."><input type="checkbox" id="horizPanel" data-id global-setting onclick="setMode('horiz')"> 2nd Panel Right</label><br>
