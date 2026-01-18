@@ -2086,19 +2086,22 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
       }
     }
 
-    // English first if reverseInterlinear
-    if (reverseInterlinear) {
-      if (showEnglish) {
-        if (pEng) {
-          appendEng(wordEl, pEng);
-          hasContent = true;
-        } else {
-          appendSpacer(wordEl, "eng");
-        }
+    if (showEnglish && pEng && reverseInterlinear) {
+      if (elements.customFormat.checked) {
+        wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
+      } else {
+        wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
       }
+      hasContent = true;
+    } else if (showEnglish && reverseInterlinear) {
+      // Add a non-clickable space span for layout consistency
+      const spaceSpan = document.createElement('span');
+      spaceSpan.className = "eng";
+      spaceSpan.textContent = '\u00A0';
+      wordEl.appendChild(spaceSpan);
     }
 
-    function appendGreek(wordEl, grk) {
+    if (showGreek && grk) {
       if (elements.uncialGreek.checked) {
         grk = toGreek(grk).toUpperCase();
       }
@@ -2109,36 +2112,53 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
       }
     }
 
-    // Greek always in middle
-    if (showGreek) {
-      if (grk) {
-        appendGreek(wordEl, grk);
-        hasContent = true;
+    if (showEnglish && pEng && !reverseInterlinear) {
+      if (elements.customFormat.checked) {
+        wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
       } else {
         appendSpacer(wordEl);
       }
+      hasContent = true;
+    } else if (showEnglish && !reverseInterlinear) {
+      // Add a non-clickable space span for layout consistency
+      const spaceSpan = document.createElement('span');
+      spaceSpan.className = "eng";
+      spaceSpan.textContent = '\u00A0';
+      wordEl.appendChild(spaceSpan);
     }
 
-    // English last if not reverseInterlinear
-    if (!reverseInterlinear) {
-      if (showEnglish) {
-        if (pEng) {
-          appendEng(wordEl, pEng);
-          hasContent = true;
-        } else {
-          appendSpacer(wordEl, "eng");
-        }
-      }
-    }
+    if (showRoots && roots) {
+      const rootParts = roots.split(',').map(r => r.trim());
 
-    if (reverseInterlinear) {
-      if (showPcode) {
-        if (pcode) {
-          appendPcode(wordEl, pcode);
-          hasContent = true;
-        } else {
-          appendSpacer(wordEl, "pcode");
-        }
+      // Container for the first root
+      const firstContainer = document.createElement('span');
+      firstContainer.className = 'roots';
+      firstContainer.style.whiteSpace = 'nowrap';
+
+      const firstSpan = createClickableSpan("roots", toGreek(rootParts[0]) + (rootParts.length > 1 ? ':' : ''), wordEl);
+      firstSpan.dataset.search = '.' + toGreek(rootParts[0]);
+      firstContainer.appendChild(firstSpan);
+      wordEl.appendChild(firstContainer);
+
+      // Container for remaining roots
+      const secondContainer = document.createElement('span');
+      secondContainer.className = 'roots';
+      secondContainer.style.whiteSpace = 'nowrap';
+
+      if (rootParts.length > 1) {
+        const remainingRoots = rootParts.slice(1);
+        remainingRoots.forEach((r, i) => {
+          const text = toGreek(r) + (i < remainingRoots.length - 1 ? ',' : '');
+          const span = createClickableSpan("roots", text, wordEl);
+          span.dataset.search = '.' + toGreek(r);
+          secondContainer.appendChild(span);
+        });
+      } else {
+        // Add blank space for layout consistency
+        const spaceSpan = document.createElement('span');
+        spaceSpan.className = "roots"
+        spaceSpan.textContent = '\u00A0';
+        secondContainer.appendChild(spaceSpan);
       }
 
       if (showStrongs) {
