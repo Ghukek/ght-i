@@ -32,10 +32,11 @@ const posMap = {
   'Inj': 'interjection',
   'DPro': 'demonstrative pronoun',
   'IPro': 'interrogative/indefinite pronoun',
-  'PPro': 'personal/possessive pronoun',
-  'RecPro': 'reciprocal pronoun',
-  'RelPro': 'relative pronoun',
-  'RefPro': 'reflexive pronoun',
+  'PerPro': 'personal pronoun', 
+  'PosPro': 'possessive pronoun', 
+  'RecPro': 'reciprocal pronoun', 
+  'RelPro': 'relative pronoun', 
+  'RefPro': 'reflexive pronoun', 
   'Heb': 'Hebrew word',
   'Aram': 'Aramaic word',
   '#': 'numeral'
@@ -104,41 +105,51 @@ function toLatin(str) {
 
 // Options popups.
 function togglePopup(id) {
-  // Close any open popups first
+  // Close any other popups
   document.querySelectorAll('.popup').forEach(p => {
     if (p.id !== id) p.style.display = 'none';
   });
 
   const popup = document.getElementById(id);
   const isVisible = window.getComputedStyle(popup).display !== 'none';
-
   if (isVisible) {
     popup.style.display = 'none';
     return;
   }
 
-  // Determine preferred display type
+  // Show popup first (block or grid)
   const displayType = popup.classList.contains('ref-popup') ? 'grid' : 'block';
   popup.style.display = displayType;
-  // Force layout so offsetWidth is correct
+
+  // Force layout
   popup.getBoundingClientRect();
 
+  // Get button
   const button = document.querySelector(`[data-toggle-popup][onclick*="'${id}'"]`);
   if (button) {
     const rect = button.getBoundingClientRect();
-    popup.style.top = `${rect.bottom + window.scrollY}px`;
+    const viewportHeight = window.innerHeight;
 
+    // Position below button initially
+    let top = rect.bottom + window.scrollY;
+
+    // Adjust max height so popup doesn't overflow viewport
+    const maxHeight = viewportHeight - rect.bottom - 18; // 10px margin
+    popup.style.maxHeight = `${maxHeight}px`;
+
+    popup.style.top = `${top}px`;
+
+    // Horizontal positioning
     let left = rect.left + window.scrollX;
     const popupWidth = popup.offsetWidth || 280;
     const viewportWidth = document.documentElement.clientWidth;
-
     if (left + popupWidth > viewportWidth) {
-      left = viewportWidth - popupWidth;
+      left = viewportWidth - popupWidth - 10; // 10px margin
     }
-
     popup.style.left = `${left}px`;
   }
 }
+
 
 function toggleHelpPopup(pop, but) {
   const popup = document.getElementById(pop);
@@ -250,6 +261,7 @@ function loadBaseJson() {
     initPickers();
     setupEventListeners();
     setFontSize();
+    setMode("init");
     if (currentRender === "search") {
       searchVerses();
     } else {
@@ -291,9 +303,11 @@ function loadBaseJson() {
     baseData = baseJson;
     lookupdb = lookupsJson; // or whatever variable you're using for the lookup table
     initializeSelections();
+    autoGapInputWidth(elements.gapInput);
     initPickers();
     setupEventListeners();
     setFontSize();
+    setMode("init");
     if (currentRender === "search") {
       searchVerses();
     } else {
@@ -350,34 +364,74 @@ const onOptionsChange = () => {
 };
 
 let restoring = false;
-const historyStack = [];
-let historyIndex = -1;
+const historyStacks = [];   // array of stacks, one per panel
+const historyIndexes = [];  // array of indexes, one per panel
+
+function initHistoryForPanels(count) {
+  for (let i = 0; i < count; i++) {
+    if (!historyStacks[i]) historyStacks[i] = [];
+    if (historyIndexes[i] === undefined) historyIndexes[i] = -1;
+  }
+}
+
+function statesEqual(a, b) {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+
+  for (const k of aKeys) {
+    if (a[k] !== b[k]) return false;
+  }
+  return true;
+}
 
 function saveState() {
   if (restoring) return;
+
+  const activePanel = document.getElementById("output");
+  if (!activePanel) return;
+
+  const panelID = Number(activePanel.dataset.panelID);
+
+  const stack = historyStacks[panelID];
+  let index = historyIndexes[panelID];
+
   const state = {};
   Object.keys(elements).forEach(id => {
     const el = elements[id];
     if (!el) return;
+    if (el.hasAttribute("global-setting")) return;
 
     if (el.type === "checkbox") state[id] = el.checked;
     else state[id] = el.value;
   });
 
+  state['centerScroll'] = centerFromSearch;
+  state['currentRender'] = currentRender;
+
+  // Do not save if identical to current
+  if (index >= 0 && statesEqual(stack[index], state)) {
+    return;
+  }
+
   // Remove “future” states if not at the end
-  if (historyIndex < historyStack.length - 1) {
-    historyStack.splice(historyIndex + 1);
+  if (index < stack.length - 1) {
+    stack.splice(index + 1);
   }
 
   // Push new state
-  historyStack.push({ state, currentRender });
-  historyIndex++;
+  stack.push(state);
+  index++;
 
   // Limit to 100
-  if (historyStack.length > 100) {
-    historyStack.shift();
-    historyIndex--;
+  if (stack.length > 100) {
+    stack.shift();
+    index--;
   }
+
+  historyIndexes[panelID] = index;
+
+  updateHistoryButtons(panelID)
 }
 
 function getSizeBytes(obj) {
@@ -387,10 +441,23 @@ function getSizeBytes(obj) {
 // Example
 // console.log("historyStack size (bytes):", getSizeBytes(historyStack));
 
-function loadState(index) {
-  if (index < 0 || index >= historyStack.length) return;
+function loadState(panelID, index) {
+  const stack = historyStacks[panelID];
+  if (!stack) return;
+  if (index < 0 || index >= stack.length) return;
+
+  const activePanel = document.getElementById("output");
+  const originalPanel = activePanel;
+
+  const targetPanel = outputContainer.querySelector(`[data-panel-i-d="${panelID}"]`);
+  if (!targetPanel) return;
+
   restoring = true;
-  const { state, currentRender: renderMode } = historyStack[index];
+
+  if (targetPanel !== originalPanel) {
+    activate(targetPanel);
+  }
+  const state = stack[index];
 
   Object.keys(state).forEach(id => {
     const el = elements[id];
@@ -398,24 +465,74 @@ function loadState(index) {
 
     if (el.type === "checkbox") el.checked = state[id];
     else {
-      if (el.id === "chapterStart") populateChapters(state["bookStart"], el);
-      if (el.id === "chapterEnd") populateChapters(state["bookEnd"], el);
-      if (el.id === "verseStart") populateVerses(state["bookStart"], state["chapterStart"], el);
-      if (el.id === "verseEnd") populateVerses(state["bookEnd"], state["chapterEnd"], el);
+      if (el.id === "chapterStart") populateChapters(state.bookStart, el);
+      if (el.id === "chapterEnd") populateChapters(state.bookEnd, el);
+      if (el.id === "verseStart") populateVerses(state.bookStart, state.chapterStart, el);
+      if (el.id === "verseEnd") populateVerses(state.bookEnd, state.chapterEnd, el);
       el.value = state[id];
     }
   });
 
-  historyIndex = index;
+  centerFromSearch = state['centerScroll'];
+  currentRender = state['currentRender']
+
+  historyIndexes[panelID] = index;
 
   // Trigger appropriate re-run
-  if (renderMode === "search") searchVerses();
+  if (currentRender === "search") searchVerses();
   else render();
+  if (originalPanel && targetPanel !== originalPanel) {
+    activate(originalPanel);
+  }
+
   restoring = false;
 }
 
-function historyBack() { loadState(historyIndex - 1); }
-function historyForward() { loadState(historyIndex + 1); }
+document.addEventListener("keydown", (e) => {
+  const isMac = navigator.platform.toUpperCase().includes("MAC");
+  const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+
+  if (!ctrlOrCmd) return;
+
+  const key = e.key.toLowerCase(); // normalize
+
+  // Undo: Ctrl+Z / Cmd+Z
+  if (key === "z" && !e.shiftKey) {
+    e.preventDefault();
+    historyBack(getActivePanelId());
+  }
+
+  // Redo: Ctrl+Shift+Z / Cmd+Shift+Z
+  if (key === "z" && e.shiftKey) {
+    e.preventDefault();
+    historyForward(getActivePanelId());
+  }
+});
+
+function updateHistoryButtons(panelID) {
+  const index = historyIndexes[panelID];
+  const stack = historyStacks[panelID];
+
+  const backBtn = document.querySelector(`[data-history-back="${panelID}"]`);
+  const fwdBtn  = document.querySelector(`[data-history-forward="${panelID}"]`);
+
+  if (!backBtn || !fwdBtn) return;
+
+  backBtn.classList.toggle("inactive", index <= 0);
+  fwdBtn.classList.toggle("inactive", index >= stack.length - 1);
+}
+
+function historyBack(panelID) {
+  const idx = historyIndexes[panelID];
+  loadState(panelID, idx - 1);
+  updateHistoryButtons(panelID);
+}
+
+function historyForward(panelID) {
+  const idx = historyIndexes[panelID];
+  loadState(panelID, idx + 1);
+  updateHistoryButtons(panelID);
+}
 
 function handleGreekInput(input, convertToGreekCheckbox) {
   let originalValue = input.value;
@@ -524,10 +641,23 @@ function setupEventListeners() {
   const fontSizeSlider = document.getElementById('fontSize');
   const fontSize2Slider = document.getElementById('fontSize2');
   const englishSecondary = document.getElementById('englishSecondary');
+  const greekSecondary = document.getElementById('greekSecondary');
   // Live updates
   fontSizeSlider.addEventListener('input', setFontSize);
   fontSize2Slider.addEventListener('input', setFontSize);
-  englishSecondary.addEventListener('change', setFontSize);
+  englishSecondary.addEventListener('change', () => {
+    if (englishSecondary.checked) {
+      greekSecondary.checked = false;
+    }
+    setFontSize();
+  });
+
+  greekSecondary.addEventListener('change', () => {
+    if (greekSecondary.checked) {
+      englishSecondary.checked = false;
+    }
+    setFontSize();
+  });
 
   elements.searchInput.addEventListener("input", function (e) {
     handleGreekInput(e.target, elements.convertToGreek);
@@ -558,8 +688,10 @@ function setupEventListeners() {
     greekHelpPopup.hidden = true;
   });
 
-  document.getElementById("historyBackBtn").addEventListener("click", historyBack);
-  document.getElementById("historyForwardBtn").addEventListener("click", historyForward);
+  document.getElementById("historyBackBtnRight").addEventListener("click", () => historyBack(1));
+  document.getElementById("historyForwardBtnRight").addEventListener("click", () => historyForward(1));
+  document.getElementById("historyBackBtnLeft").addEventListener("click", () => historyBack(0));
+  document.getElementById("historyForwardBtnLeft").addEventListener("click", () => historyForward(0));
 }
 
 // Fancy Reference Selector Box code.
@@ -632,6 +764,7 @@ function buildChapters(prefix, bookIndex) {
   if (!col) return;
 
   col.innerHTML = "";
+  col.scrollTop = 0;
 
   const bookLabel = getBookLabel(bookIndex);
   col.appendChild(makeHeaderSpacerFromColumn(col, bookLabel));
@@ -653,6 +786,7 @@ function buildVerses(prefix, bookIndex, chapIndex) {
   if (!col) return;
 
   col.innerHTML = "";
+  col.scrollTop = 0;
 
   const headerText = `${getBookLabel(bookIndex)} ${parseInt(chapIndex) + 1}`;
   col.appendChild(makeHeaderSpacerFromColumn(col, headerText));
@@ -838,27 +972,11 @@ function initializeSelections() {
 
   const range = getUrlRange();
 
-  const settings = JSON.parse(localStorage.getItem("userSettings"));
+  const allSettings = loadAllSettings();
+  const settings = allSettings.panels[0] || {};
 
   if (settings) {
-    for (const [key, value] of Object.entries(settings)) {
-      const el = elements[key] || document.getElementById(key);
-      if (!el) continue;
-
-      if (el.type === "checkbox" || el.type === "radio") {
-        el.checked = value;
-      } else if ("value" in el) {
-        el.value = value;
-      }
-    }
-
-    // Apply header collapse state
-    if (typeof settings.headerCollapsed === 'boolean') {
-      document.getElementById('header')?.classList.toggle('collapsed', settings.headerCollapsed);
-    }
-
-    // Apply headgroup collapse states
-    setCollapsedHeadGroups(settings.headGroupsCollapsed || []);
+    loadSettings();
   }
 
   if (range?.gapInput > 0) {
@@ -955,6 +1073,11 @@ function initializeSelections() {
 
   // Load search params if present
   applyUrlSearch();
+
+  // Initialize panel ref/search based on saved/random data.
+  //for (let i = 0; i < maxPanels; i++) {
+  //  storePanelState(i);
+  //}
 }
 
 // Helper function to pad numbers for url encoding
@@ -997,7 +1120,7 @@ function encodeRangeToUrl() {
     .catch(err => alert("Failed to copy URL: " + err));
   window.history.replaceState(null, "", newUrl);
 
-  togglePopup("savePopup");
+  togglePopup("sharePopup");
 }
 
 // URL Search Save
@@ -1039,7 +1162,7 @@ function saveUrlSearch() {
     .catch(err => alert("Failed to copy URL: " + err));
   window.history.replaceState(null, "", newUrl);
 
-  togglePopup("savePopup");
+  togglePopup("sharePopup");
 }
 
 function resetUrl() {
@@ -1051,7 +1174,7 @@ function resetUrl() {
     .catch(err => alert("Failed to copy URL: " + err));
   window.history.replaceState(null, "", newUrl);
 
-  togglePopup("savePopup");
+  togglePopup("sharePopup");
 }
 
 function applyUrlSearch() {
@@ -1188,9 +1311,11 @@ function setFontSize() {
   let size1 = fontSizeScale[elements.fontSize.value];
   let size2 = fontSizeScale[elements.fontSize2.value];
   let size3 = elements.englishSecondary.checked ? size2 : size1;
+  let size4 = elements.greekSecondary.checked ? size2 : size1;
   document.documentElement.style.setProperty("--font-size", size1 + "px");
   document.documentElement.style.setProperty("--font-size-reduced", size2 + "px");
   document.documentElement.style.setProperty("--font-size-english", size3 + "px");
+  document.documentElement.style.setProperty("--font-size-greek", size4 + "px");
   saveSettings();
 }
 
@@ -1402,21 +1527,33 @@ function insertFwdBack(container) {
   container.appendChild(btnWrapper);
 }
 
+let centerFromSearch = false;
 let currentRender = "reference"; // used to track current rendering mode, changed in render()
-function render(customVerses = null) {
+function render(customVerses = null, inDouble = false) {
   if (customVerses && Array.isArray(customVerses)) {
     currentRender = "search";
   } else {
     currentRender = "reference";
   }
+  if (elements.linkPanels.checked && (elements.horizPanel.checked || elements.vertPanel.checked) && currentRender === "reference" && !inDouble) { 
+    let activePanel = getActivePanelId();
+    let inactivePanel = activePanel === 1 ? 0 : 1;
+    activate(outputContainer.querySelector(`[data-panel-i-d="${inactivePanel}"]`), true);
+    render(customVerses, true);
+    activate(outputContainer.querySelector(`[data-panel-i-d="${activePanel}"]`), true);
+    render(customVerses, true);
+    return
+  }
+  immediateHidePopup();
   saveState()
   const container = document.getElementById("output");
   container.innerHTML = "";
+  container.scrollTop = 0; // reset scroll to top
+  //storePanelState(container.dataset.panelID);
 
   const { showGreek, showEnglish, showPcode, showStrongs, showRoots } = getDisplayOptions();
   let showVerses = elements.showVerses.checked;
   const reverseInterlinear = elements.reverseInterlinear.checked;
-  const newlineAfterVerse = elements.newlineAfterVerse.checked;
   const altSearch = elements.altSearch.checked;
 
   let passUnderscore = null;
@@ -1550,7 +1687,6 @@ function render(customVerses = null) {
             span.addEventListener("click", (e) => {
               const isPopupActive = span.closest(".col") === currentPopup;
               const timeSincePopup = Date.now() - popupActivatedAt;
-
               if (isPopupActive && timeSincePopup > 200) {
                 const cleanText = span.textContent.trim();
                 elements.searchInput.value = cleanText;
@@ -1683,6 +1819,11 @@ function render(customVerses = null) {
     }
   }
   elements.gapInput.value = count;
+  if (centerFromSearch) {
+    container.scrollTop = (container.scrollHeight - container.clientHeight) / 2;
+    centerFromSearch = false;
+  }
+  return;
 }
 
 function createClickableSpan(className, text, wordEl) {
@@ -1698,7 +1839,9 @@ function createClickableSpan(className, text, wordEl) {
     const isPopupActive = wordEl === currentPopup;
     const timeSincePopup = Date.now() - popupActivatedAt;
     if (isPopupActive && timeSincePopup > 200) {
-      const term = span.dataset.search || span.textContent.trim();
+      const term =
+        span.dataset.search ||
+        span.textContent.trim().split(/\s+/)[0];
       elements.searchInput.value = term;
       searchVerses();
     }
@@ -1904,117 +2047,173 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
 
     let hasContent = false;
 
-    if (showStrongs && strongs) {
-      wordEl.appendChild(createClickableSpan("pcode", strongs, wordEl));
-      hasContent = true;
-    } else if (showStrongs) {
-      // Add a non-clickable space span for layout consistency
-      const spaceSpan = document.createElement('span');
-      spaceSpan.className = "pcode"
-      spaceSpan.textContent = '\u00A0';
-      wordEl.appendChild(spaceSpan);
+    function appendPcode(wordEl, value) {
+      wordEl.appendChild(createClickableSpan("pcode", value, wordEl));
     }
 
-    if (showPcode && pcode) {
-      wordEl.appendChild(createClickableSpan("pcode", pcode, wordEl));
-      hasContent = true;
-    } else if (showPcode) {
-      // Add a non-clickable space span for layout consistency
-      const spaceSpan = document.createElement('span');
-      spaceSpan.className = "pcode"
-      spaceSpan.textContent = '\u00A0';
-      wordEl.appendChild(spaceSpan);
-    }
-
-    if (showEnglish && pEng && reverseInterlinear) {
+    function appendEng(wordEl, pEng) {
       if (elements.customFormat.checked) {
         wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
       } else {
         wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
       }
-      hasContent = true;
-    } else if (showEnglish && reverseInterlinear) {
-      // Add a non-clickable space span for layout consistency
-      const spaceSpan = document.createElement('span');
-      spaceSpan.className = "eng";
-      spaceSpan.textContent = '\u00A0';
-      wordEl.appendChild(spaceSpan);
     }
 
-    if (showGreek && grk) {
+    function appendSpacer(wordEl, className = null) {
+      const span = document.createElement('span');
+      if (className) span.className = className;
+      span.textContent = '\u00A0';
+      wordEl.appendChild(span);
+    }
+
+
+    if (!reverseInterlinear) {
+      if (showStrongs) {
+        if (strongs) {
+          appendPcode(wordEl, strongs);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "pcode");
+        }
+      }
+
+      if (showPcode) {
+        if (pcode) {
+          appendPcode(wordEl, pcode);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "pcode");
+        }
+      }
+    }
+
+    // English first if reverseInterlinear
+    if (reverseInterlinear) {
+      if (showEnglish) {
+        if (pEng) {
+          appendEng(wordEl, pEng);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "eng");
+        }
+      }
+    }
+
+    function appendGreek(wordEl, grk) {
       if (elements.uncialGreek.checked) {
         grk = toGreek(grk).toUpperCase();
       }
-      wordEl.appendChild(createClickableSpan("grk", toGreek(grk), wordEl));
-      hasContent = true;
-    } else if (showGreek) {
-      // Add a non-clickable space span for layout consistency
-      const spaceSpan = document.createElement('span');
-      spaceSpan.textContent = '\u00A0';
-      wordEl.appendChild(spaceSpan);
+      if (grk) {
+        wordEl.appendChild(createClickableSpan("grk", toGreek(grk), wordEl));
+      } else {
+        appendSpacer(wordEl, "grk")
+      }
     }
 
-    if (showEnglish && pEng && !reverseInterlinear) {
-      if (elements.customFormat.checked) {
-        wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
+    // Greek always in middle
+    if (showGreek) {
+      if (grk) {
+        appendGreek(wordEl, grk);
+        hasContent = true;
       } else {
-        wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
+        appendSpacer(wordEl);
       }
-      hasContent = true;
-    } else if (showEnglish && !reverseInterlinear) {
-      // Add a non-clickable space span for layout consistency
-      const spaceSpan = document.createElement('span');
-      spaceSpan.className = "eng";
-      spaceSpan.textContent = '\u00A0';
-      wordEl.appendChild(spaceSpan);
     }
 
-    if (showRoots && roots) {
-      const rootParts = roots.split(',').map(r => r.trim());
+    // English last if not reverseInterlinear
+    if (!reverseInterlinear) {
+      if (showEnglish) {
+        if (pEng) {
+          appendEng(wordEl, pEng);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "eng");
+        }
+      }
+    }
 
-      // Container for the first root
-      const firstContainer = document.createElement('span');
-      firstContainer.className = 'roots';
-      firstContainer.style.whiteSpace = 'nowrap';
-
-      const firstSpan = createClickableSpan("roots", toGreek(rootParts[0]) + (rootParts.length > 1 ? ':' : ''), wordEl);
-      firstSpan.dataset.search = '.' + toGreek(rootParts[0]);
-      firstContainer.appendChild(firstSpan);
-      wordEl.appendChild(firstContainer);
-
-      // Container for remaining roots
-      const secondContainer = document.createElement('span');
-      secondContainer.className = 'roots';
-      secondContainer.style.whiteSpace = 'nowrap';
-
-      if (rootParts.length > 1) {
-        const remainingRoots = rootParts.slice(1);
-        remainingRoots.forEach((r, i) => {
-          const text = toGreek(r) + (i < remainingRoots.length - 1 ? ',' : '');
-          const span = createClickableSpan("roots", text, wordEl);
-          span.dataset.search = '.' + toGreek(r);
-          secondContainer.appendChild(span);
-        });
-      } else {
-        // Add blank space for layout consistency
-        const spaceSpan = document.createElement('span');
-        spaceSpan.className = "roots"
-        spaceSpan.textContent = '\u00A0';
-        secondContainer.appendChild(spaceSpan);
+    if (reverseInterlinear) {
+      if (showPcode) {
+        if (pcode) {
+          appendPcode(wordEl, pcode);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "pcode");
+        }
       }
 
-      wordEl.appendChild(secondContainer);
-      hasContent = true;
-    } else if (showRoots) {
-      // Add a non-clickable space span for layout consistency
+      if (showStrongs) {
+        if (strongs) {
+          appendPcode(wordEl, strongs);
+          hasContent = true;
+        } else {
+          appendSpacer(wordEl, "pcode");
+        }
+      }
+    }
+
+    function createRootsContainer() {
+      const c = document.createElement('span');
+      c.className = 'roots';
+      c.style.whiteSpace = 'nowrap';
+      return c;
+    }
+
+    function createRootSpan(root, suffix, wordEl) {
+      const text = toGreek(root) + suffix;
+      const span = createClickableSpan("roots", text, wordEl);
+      span.dataset.search = '.' + toGreek(root);
+      return span;
+    }
+
+    function appendRootsSpacer(container) {
       const spaceSpan = document.createElement('span');
+      spaceSpan.className = 'roots';
       spaceSpan.textContent = '\u00A0';
-      spaceSpan.className = "pcode"
-      wordEl.appendChild(spaceSpan);
-      const spaceSpan2 = document.createElement('span');
-      spaceSpan2.className = "pcode"
-      spaceSpan2.textContent = '\u00A0';
-      wordEl.appendChild(spaceSpan2);
+      container.appendChild(spaceSpan);
+    }
+
+    const rootParts = roots ? roots.split(',').map(r => r.trim()) : [];
+
+    if (showRoots) {
+      if (rootParts.length > 0) {
+
+        const firstContainer = createRootsContainer();
+        const secondContainer = createRootsContainer();
+
+        // First root
+        const firstRoot = rootParts[0];
+        const hasMore = rootParts.length > 1;
+        firstContainer.appendChild(
+          createRootSpan(firstRoot, hasMore ? ':' : '', wordEl)
+        );
+
+        // Remaining roots
+        if (hasMore) {
+          const remaining = rootParts.slice(1);
+          remaining.forEach((r, i) => {
+            const suffix = i < remaining.length - 1 ? ',' : '';
+            secondContainer.appendChild(
+              createRootSpan(r, suffix, wordEl)
+            );
+          });
+        } else {
+          appendRootsSpacer(secondContainer);
+        }
+
+        wordEl.appendChild(firstContainer);
+        wordEl.appendChild(secondContainer);
+        hasContent = true;
+
+      } else {
+        // two spacers to preserve layout
+        const c1 = createRootsContainer();
+        const c2 = createRootsContainer();
+        appendRootsSpacer(c1);
+        appendRootsSpacer(c2);
+        wordEl.appendChild(c1);
+        wordEl.appendChild(c2);
+      }
     }
 
     if (hasContent) {
@@ -2251,7 +2450,7 @@ function showPopupDelay(event) {
   // Wait 300 ms before calling your original showPopup()
   popupDelayTimer = setTimeout(() => {
     showPopup(event); // your existing popup function
-  }, 250);
+  }, 400);
 }
 
 function hidePopup() {
@@ -2262,6 +2461,14 @@ function hidePopup() {
   currentPopup = null;
   popupActivatedAt = 0; // Reset activation time
 }
+
+function immediateHidePopup() {
+  clearTimeout(popupDelayTimer);
+  document.getElementById("wordPopup").style.display = "none";
+  currentPopup = null;
+  popupActivatedAt = 0;
+}
+
 function cancelHidePopup() {
   clearTimeout(popupTimeout);
 }
@@ -2300,68 +2507,148 @@ function showPopupTouchEnd(e) {
   }
 }
 
+// Start Settings Code
+
+const SETTINGS_KEY = "userSettingsV4";
+
+function getActivePanelId() {
+  return Number(document.getElementById("output")?.dataset.panelID || 0);
+}
+
+function loadAllSettings() {
+  return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{"global":{}, "panels":[]}');
+  //return JSON.parse('{"global":{}, "panels":[]}'); // Use this line to turn off settings.
+}
+
+function saveAllSettings(data) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+}
+
+function dumpAllSettings() {
+  localStorage.clear();
+  const baseUrl = window.location.origin + window.location.pathname;
+  const newUrl = `${baseUrl}`;
+  window.history.replaceState(null, "", newUrl);
+  location.reload();
+}
+
 function saveSettings(targetAttr = null) {
   // Load existing settings so we only update parts
-  const settings = JSON.parse(localStorage.getItem("userSettings") || "{}");
+  const panelId = getActivePanelId();
+  const data = loadAllSettings();
+
+  const globalSettings = data.global || {};
+  const panelSettings = data.panels[panelId] || {};
 
   for (const [key, el] of Object.entries(elements)) {
     if (!el) continue;
 
     // Case 1: saving only a specific group
-    if (targetAttr) {
-      if (!el.hasAttribute(targetAttr)) continue;
-    } 
+    if (targetAttr && !el.hasAttribute(targetAttr)) continue;
     // Case 2: default save (exclude special groups)
-    else {
-      if (el.hasAttribute("ref-id") || el.hasAttribute("search-id")) continue;
-    }
+    if (!targetAttr && (el.hasAttribute("ref-id") || el.hasAttribute("search-id"))) continue;
+
+    const isGlobal = el.hasAttribute("global-setting");
+    const target = isGlobal ? globalSettings : panelSettings;
 
     // Save checkbox/radio as boolean, others as value
     if (el.type === "checkbox" || el.type === "radio") {
-      settings[key] = el.checked;
+      target[key] = el.checked;
     } else if ("value" in el) {
-      settings[key] = el.value;
+      target[key] = el.value;
     }
   }
 
   // Save header collapse state
-  settings.headerCollapsed = document.getElementById('header')?.classList.contains('collapsed') || false;
+  globalSettings.headerCollapsed = document.getElementById('header')?.classList.contains('collapsed') || false;
 
   // Save collapsed headgroups
-  settings.headGroupsCollapsed = getCollapsedHeadGroups();
+  globalSettings.headGroupsCollapsed = getCollapsedHeadGroups();
 
-  localStorage.setItem("userSettings", JSON.stringify(settings));
+  data.global = globalSettings;
+  data.panels[panelId] = panelSettings;
+
+  saveAllSettings(data);
 }
 
-function resetSettings(targetAttr = null) {
-  const settings = JSON.parse(localStorage.getItem("userSettings") || "{}");
+function resetSettings(targetAttr = null, panelOnly = null) {
+  const panelId = getActivePanelId();
+  const data = loadAllSettings();
+
+  const panelSettings = data.panels[panelId] || {};
+  const globalSettings = data.global || {};
 
   for (const [key, el] of Object.entries(elements)) {
     if (!el) continue;
 
     // Case 1: reset only a specific group
-    if (targetAttr) {
-      if (!el.hasAttribute(targetAttr)) continue;
-    } 
+    if (targetAttr && !el.hasAttribute(targetAttr)) continue;
     // Case 2: default reset (exclude ref-id and search-id)
-    else {
-      if (el.hasAttribute("ref-id") || el.hasAttribute("search-id")) continue;
-    }
+    if (!targetAttr && (el.hasAttribute("ref-id") || el.hasAttribute("search-id"))) continue;
 
     // Delete from settings
-    delete settings[key];
-    delete settings.headerCollapsed;
-    delete settings.headGroupsCollapsed;
+    if (el.hasAttribute("global-setting")) {
+      if (!panelOnly) delete globalSettings[key];
+    } else {
+      delete panelSettings[key];
+    }
+  }
+
+  if (!panelOnly) {
+    delete globalSettings.headerCollapsed;
+    delete globalSettings.headGroupsCollapsed;
   }
 
   // Save updated settings back
-  if (Object.keys(settings).length > 0) {
-    localStorage.setItem("userSettings", JSON.stringify(settings));
+  if (Object.keys(panelSettings).length === 0) delete data.panels[panelId];
+  if (Object.keys(globalSettings).length === 0 && !panelOnly) delete data.global;
+
+  saveAllSettings(data);
+  if (targetAttr === "ref-id") {
+    showToast(`Reference Reset!`)
   } else {
-    localStorage.removeItem("userSettings");
+    location.reload();
+  }
+}
+
+function loadSettings(pageload=true, global=true) {
+  const panelId = getActivePanelId();
+  const data = loadAllSettings();
+
+  const panelSettings = data.panels[panelId] || {};
+  const globalSettings = data.global || {};
+
+  // Apply globals first, then panel overrides
+  let merged = { ...panelSettings };
+  if (global) {
+    merged = { ...globalSettings, ...panelSettings };
   }
 
-  location.reload();
+  for (const [key, value] of Object.entries(merged)) {
+    const el = elements[key] || document.getElementById(key);
+    if (!el) continue;
+
+    if (el.type === "checkbox" || el.type === "radio") {
+      el.checked = value;
+    } else if ("value" in el) {
+      el.value = value;
+    }
+
+    if (key === "bookStart") populateChapters(value,  elements.chapterStart);
+    if (key === "bookEnd") populateChapters(value, elements.chapterEnd);
+    if (key === "chapterStart") populateVerses(elements.bookStart.value, value, elements.verseStart);
+    if (key === "chapterEnd") populateVerses(elements.bookEnd.value, value, elements.verseEnd)
+  }
+
+  if (pageload) {
+    // Apply header collapse state
+    if (typeof globalSettings.headerCollapsed === 'boolean') {
+      document.getElementById('header')?.classList.toggle('collapsed', globalSettings.headerCollapsed);
+    }
+
+    // Apply headgroup collapse states
+    setCollapsedHeadGroups(panelSettings.headGroupsCollapsed || []);
+  }
 }
 
 function parseMorphTag(tag) {
@@ -2725,11 +3012,13 @@ function refSearch(searchTerm) {
     // Reference search
   const ref = tryParseReference(searchTerm);
   if (ref) {
+    if (elements.centerRange.checked) centerFromSearch = true;
     setReferenceRange(ref);
     updateDisplay();
     render();
-    return;
+    return true;
   }
+  return false;
 }
 
 function searchVerses() {
@@ -2758,13 +3047,7 @@ function searchVerses() {
   }
 
   // Reference search
-  const ref = tryParseReference(searchTerm);
-  if (ref) {
-    setReferenceRange(ref);
-    updateDisplay();
-    render();
-    return;
-  }
+  if (refSearch(searchTerm)) return
 
   if (searchTerm.includes(" ") || showContext) {
     const matches = multiWordSearch(searchTerm);
@@ -2858,16 +3141,17 @@ function handleLookupMatches(searchTerm, matches) {
     }
   }
 
-  if (morphMatches.length === 0) return;
-
   // if we're in uniqueWords mode we’re done
   if (uniqueWords) {
     // add boundary marker if we have more than one page
     if (searchState.boundaries.length <= searchState.page + 1 && count > endIndex) {
       searchState.boundaries.push(endIndex);
-    }
+    } 
+    // At some point I need to add sorting for unique words. In order to do that, I need to move the pagination down here.
     return;
   }
+
+  if (morphMatches.length === 0) return;
 
   let exact = elements.exactMatch.checked; // BEGIN LXX Helper
   if (searchTerm.startsWith('=')) {
@@ -3421,7 +3705,7 @@ function copyText(mode) {
   const cleanText = mode === "grk" ? "Greek" : "English";
   if (!output) return;
 
-  togglePopup('copyPopup')
+  togglePopup('sharePopup')
 
   // Bail out if grid view is active
   if (output.querySelector(".word-list-grid")) {
@@ -3434,7 +3718,7 @@ function copyText(mode) {
   // Traverse in natural DOM order
   output.querySelectorAll(".verse-label, .word .grk, .word .eng").forEach(span => {
     if (span.classList.contains("verse-label")) {
-      texts.push(span.textContent.trim());
+      texts.push('[' + span.textContent.trim() + ']');
     } else if (mode === "grk" && span.classList.contains("grk")) {
       texts.push(span.textContent.trim());
     } else if (mode === "eng" && span.classList.contains("eng")) {
@@ -3656,11 +3940,13 @@ function toggleHeader(e) {
     // when expanding: allow it to auto-size again
     extras.style.width = '';
   }
+  updatePanelHeight()
   saveSettings();
 }
 
 function toggleHeadGroups(inel) {
   document.getElementById(inel).classList.toggle('collapsed');
+  updatePanelHeight()
   saveSettings();
 }
 
@@ -3758,10 +4044,264 @@ fontToggle.addEventListener('change', e => {
 
 function autoGapInputWidth(el) {
   const len = el.value.length || 1;
-  el.style.width = (len + 2) + 'ch';
+  el.style.width = (len + 3) + 'ch';
 }
 
-autoGapInputWidth(elements.gapInput);
+// Start multi-panel code.
+const outputContainer = document.getElementById("output-container");
+
+const panelState = {};
+const maxPanels = 1; // Zero-based max panels. Change this if going from 2 panels.
+
+// Removed due to being redundant to historyStacks
+function storePanelState(panelID) {
+  panelState[panelID] = {
+    bookStart: parseInt(elements.bookStart.value),
+    chapterStart: parseInt(elements.chapterStart.value),
+    verseStart: parseInt(elements.verseStart.value),
+    bookEnd: parseInt(elements.bookEnd.value),
+    chapterEnd: parseInt(elements.chapterEnd.value),
+    verseEnd: parseInt(elements.verseEnd.value),
+    search: elements.searchInput.value.trim(),
+    gap: parseInt(elements.gapInput.value, 10) || 1,
+    currentRender: currentRender
+  };
+}
+// End removed.
+
+function loadPanelState(panelID) {
+  //console.log(historyStacks[panelID][historyIndexes[panelID]])
+  const state = historyStacks[panelID][historyIndexes[panelID]];
+  //const state = panelState[panelID];
+  if (!state) return;
+
+  elements.bookStart.value = state.bookStart;
+  elements.chapterStart.value = state.chapterStart;
+  elements.verseStart.value = state.verseStart;
+  elements.bookEnd.value = state.bookEnd;
+  elements.chapterEnd.value = state.chapterEnd;
+  elements.verseEnd.value = state.verseEnd;
+  elements.searchInput.value = state.searchInput;
+  elements.gapInput.value = state.gapInput;
+  currentRender = state.currentRender;
+  updateDisplay();
+}
+
+function attachResize(divider) {
+  let startPos = 0;
+  let startSizes = null;
+  let isHorizontal = true;
+
+  function onMove(pos) {
+    if (isHorizontal) {
+      const total = startSizes.left + startSizes.right;
+      let newLeft = startSizes.left + pos - startPos;
+      newLeft = Math.max(80, Math.min(newLeft, total - 80));
+      const newRight = total - newLeft;
+      outputContainer.style.gridTemplateColumns = `${newLeft}px 6px ${newRight}px`;
+    } else {
+      const total = startSizes.top + startSizes.bottom;
+      let newTop = startSizes.top + pos - startPos;
+      newTop = Math.max(80, Math.min(newTop, total - 80));
+      const newBottom = total - newTop;
+      outputContainer.style.gridTemplateRows = `${newTop}px 6px ${newBottom}px`;
+    }
+  }
+
+  function onMouseMove(e) {
+    onMove(isHorizontal ? e.clientX : e.clientY);
+  }
+
+  function onTouchMove(e) {
+    if (e.touches.length > 0) {
+      onMove(isHorizontal ? e.touches[0].clientX : e.touches[0].clientY);
+    }
+  }
+
+  function onUp() {
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onUp);
+    document.removeEventListener("touchmove", onTouchMove);
+    document.removeEventListener("touchend", onUp);
+
+    // Re-enable text selection
+    document.body.style.userSelect = "";
+    document.body.style.pointerEvents = "";
+  }
+
+  function startDrag(posEvent) {
+    isHorizontal = outputContainer.classList.contains("horizontal");
+    startPos = isHorizontal
+      ? posEvent.clientX || posEvent.touches[0].clientX
+      : posEvent.clientY || posEvent.touches[0].clientY;
+
+    const panels = outputContainer.querySelectorAll(".panel");
+    if (isHorizontal) {
+      startSizes = {
+        left: panels[0].offsetWidth,
+        right: panels[1].offsetWidth
+      };
+    } else {
+      startSizes = {
+        top: panels[0].offsetHeight,
+        bottom: panels[1].offsetHeight
+      };
+    }
+
+    // Disable text selection while dragging
+    document.body.style.userSelect = "none";
+    // Optional: disable pointer events for iframes or other overlays
+    document.body.style.pointerEvents = "none";
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onUp);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onUp);
+  }
+
+  divider.addEventListener("mousedown", startDrag);
+  divider.addEventListener("touchstart", e => {
+    e.preventDefault(); // Prevent scrolling
+    startDrag(e);
+  }, { passive: false });
+}
+
+
+function resetPanelLayout() {
+  outputContainer.style.gridTemplateColumns = "";
+  outputContainer.style.gridTemplateRows = "";
+
+  if (outputContainer.classList.contains("horizontal")) {
+    outputContainer.style.gridTemplateColumns = "1fr 6px 1fr";
+    outputContainer.style.gridTemplateRows = "1fr";
+  }
+
+  if (outputContainer.classList.contains("vertical")) {
+    outputContainer.style.gridTemplateRows = "1fr 6px 1fr";
+    outputContainer.style.gridTemplateColumns = "1fr";
+  }
+}
+
+function buildPanels(count) {
+  if (count === 1) {
+    document.getElementById("historyButtonsRight").style.visibility = "hidden";
+  } else {
+    document.getElementById("historyButtonsRight").style.visibility = "visible";
+  }
+  const oldOutput = document.getElementById("output");
+
+  resetPanelLayout();
+  initHistoryForPanels(count);
+
+  outputContainer.innerHTML = "";
+
+  for (let i = 0; i < count; i++) {
+    const div = document.createElement("div");
+    div.className = "panel";
+    div.dataset.panelID = i;
+
+    if (i === 0 && oldOutput) {
+      div.innerHTML = oldOutput.innerHTML;
+    }
+
+    div.addEventListener("mousedown", (event) => {
+      const target = event.target;
+
+      // Check if the clicked element is a <span class="verse-label">  or a <span> within <span class="word">. These are click-to-search and so the user may desire to send the result to the active panel.
+      if (target.matches("span.verse-label") || target.closest("span.word") || target.closest("div.word-row span[class^='col']")) {
+        if (!target.closest("div.word-row.word-header")) {
+          return; // Skip chaning the active panel unless in a header row.
+        }
+      }
+
+      // Otherwise, activate the panel
+      activate(div);
+    });
+    outputContainer.appendChild(div);
+
+    if (i < count - 1) {
+      const divider = document.createElement("div");
+      divider.className = "divider";
+      outputContainer.appendChild(divider);
+      attachResize(divider);
+    }
+  }
+  updatePanelHeight();
+  for (let i = 0; i < count; i++) { // Start at 1 because first panel is already loaded properly on init.
+    const panel = outputContainer.querySelector(`[data-panel-i-d="${i}"]`);
+    if (panel) {
+      activate(panel);
+      if (historyIndexes[i] === -1) onOptionsChange();
+      else loadState(i, historyIndexes[i])
+    }
+  }
+  activate(outputContainer.firstElementChild);
+}
+
+function activate(panel, fromRender = false) {
+  const current = document.getElementById("output");
+  if (current) current.id = "notput";
+
+  panel.id = "output";
+
+  loadSettings(false, false);
+  if (!fromRender) loadPanelState(panel.dataset.panelID);
+}
+
+function setMode(changed = null) {
+  if (changed !== "init") {
+    togglePopup("panelPopup") 
+  }
+  if (changed === "vert" && elements.vertPanel.checked) {
+    elements.horizPanel.checked = false;
+  } else if (changed === "horiz" && elements.horizPanel.checked) {
+    elements.vertPanel.checked = false;
+  }
+
+  if (elements.horizPanel.checked) {
+    outputContainer.className = "horizontal";
+    buildPanels(2);
+  } else if (elements.vertPanel.checked) {
+    outputContainer.className = "vertical";
+    buildPanels(2);
+  } else {
+    outputContainer.className = "one";
+    if (changed !== "init") activate(outputContainer.querySelector(`[data-panel-i-d="${0}"]`), true); // This line ensures the first panel is active when switching back to single panel mode to avoid any data conflicts.
+    buildPanels(1);
+  }
+
+  onOptionsChange();
+}
+
+function updatePanelHeight() {
+  const isMobile = elements.smallScreen.checked;
+  let height;
+
+  if (isMobile) {
+    // On mobile: ~90% of viewport
+    height = Math.round(window.innerHeight * 0.9);
+  } else {
+    const bottomEl = document.getElementById("headWrapper2");
+    const topEl = document.getElementById("navHeader");
+
+    if (bottomEl && topEl) {
+      const bottomOfBottomEl = bottomEl.getBoundingClientRect().bottom;
+      const topOfTopEl = topEl.getBoundingClientRect().top;
+      
+      height = Math.max(0, topOfTopEl - bottomOfBottomEl - 10);
+    } else {
+      // Fallback if either element is missing
+      height = window.innerHeight;
+    }
+  }
+
+  // Apply height via CSS variable
+  document.documentElement.style.setProperty("--panel-height", `${height}px`);
+}
+
+window.addEventListener("resize", updatePanelHeight);
+window.addEventListener("orientationchange", updatePanelHeight);
+document.addEventListener("DOMContentLoaded", updatePanelHeight);
 
 // Load initial data from server.
 loadBaseJson();
