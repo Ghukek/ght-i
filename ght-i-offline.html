@@ -45,7 +45,7 @@
   button:hover {
     background-color: #d4c3a2;
   }
-  #installBtn {
+  #installBtn, #downloadBtn {
     display: none; /* only shown when install prompt is ready */
   }
   #openBtn {
@@ -57,17 +57,35 @@
   <h1>GHT-I Offline</h1>
 
   <div class="info-box">
-    <p>Install this app to your home screen for full offline access to the GHT Interlinear Study Tool.</p>
-    <p>Or open the app directly below:</p>
+    <p>Add this WebApp to your home screen for full offline access to the GHT Interlinear Study Tool.</p>
+    <p>Or open the WebApp directly below:</p>
+    <p id="ios-instructions" style="display:none;">
+      To install this app on your iPhone or iPad, tap the Share icon and select "Add to Home Screen".
+    </p>
+    <p id="manual-install" style="display:none;">
+      To add this WebApp to your home screen, open the browser menu and select "Add to Home screen".
+    </p>
   </div>
 
   <div>
-    <button id="installBtn">Install App</button>
-    <button id="openBtn">Open App</button>
+    <button id="downloadBtn">Download WebApp</button>
+    <button id="installBtn">Install WebApp</button>
+    <button id="openBtn">Open WebApp</button>
   </div>
 
 <script>
 let deferredPrompt;
+
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+if (isIOS) document.getElementById('ios-instructions').style.display = 'block';
+
+const isSamsung = /SamsungBrowser/i.test(navigator.userAgent);
+if (isSamsung) document.getElementById('manual-install').style.display = 'block';
+
+const isDesktop = !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+if (isDesktop) {
+  document.getElementById('downloadBtn').style.display = 'inline-block';
+}
 
 // Show install button when browser triggers beforeinstallprompt
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -97,6 +115,23 @@ if ('serviceWorker' in navigator) {
     .then(() => console.log('Service worker registered'))
     .catch(err => console.log('SW registration failed:', err));
 }
+
+// Handle download button click
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  fetch('ght-i.html')
+    .then(response => response.blob())
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ght-i.html';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch(err => alert('Failed to download file: ' + err));
+});
 </script>
 </body>
 </html>
