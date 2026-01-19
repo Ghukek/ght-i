@@ -488,6 +488,51 @@ function loadState(panelID, index) {
   restoring = false;
 }
 
+document.getElementById("swapPanelsBtn").addEventListener("click", () => {
+  swapPanelsHistory(0, 1);
+});
+
+function activateAllPanelsAndRefresh() {
+  const current = document.getElementById("output");
+  const originalPanelID = current?.dataset.panelID;
+
+  restoring = true;
+
+  const panels = outputContainer.querySelectorAll("[data-panel-i-d]");
+  panels.forEach(panel => {
+    activate(panel, false);
+    onOptionsChange();
+  });
+
+  restoring = false;
+
+  if (originalPanelID !== undefined) {
+    const panel = outputContainer.querySelector(
+      `[data-panel-i-d="${originalPanelID}"]`
+    );
+    if (panel) activate(panel);
+  }
+}
+
+function swapPanelsHistory(a = 0, b = 1) {
+  console.log(historyStacks[0]['bookStart'])
+  if (!historyStacks[0] || !historyStacks[1]) return;
+  // swap history stacks
+  [historyStacks[a], historyStacks[b]] =
+    [historyStacks[b], historyStacks[a]];
+
+  // swap history indexes
+  [historyIndexes[a], historyIndexes[b]] =
+    [historyIndexes[b], historyIndexes[a]];
+
+  // Update history buttons for both panels
+  updateHistoryButtons(a);
+  updateHistoryButtons(b);
+
+  activateAllPanelsAndRefresh();
+  console.log(historyStacks)
+}
+
 document.addEventListener("keydown", (e) => {
   const isMac = navigator.platform.toUpperCase().includes("MAC");
   const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
