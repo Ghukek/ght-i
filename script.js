@@ -809,7 +809,7 @@ function makeHeaderSpacerFromColumn(col, text) {
 
 let useAbbrev = true; // controlled externally
 function getBookLabel(i) {
-  if (debugMode) console.log("getBookLabel()");
+  if (debugModeExtra) console.log("getBookLabel()"); // Excessive calls
   return useAbbrev ? bookAbb[i] : bookNames[i];
 }
 
@@ -1611,7 +1611,7 @@ function processFormatting(input) {
 }
 
 function getDisplayOptions() {
-  if (debugMode) console.log("getDisplayOptions()");
+  if (debugModeExtra) console.log("getDisplayOptions()"); // Basic simplifier.
   return {
     showGreek: elements.showGreek.checked,
     showEnglish: elements.showEnglish.checked,
@@ -1670,7 +1670,7 @@ function render(customVerses = null, inDouble = false) {
     if (debugMode) console.log("end render()");
     return
   }
-  immediateHidePopup();
+  if (!otherPanel) immediateHidePopup();
   saveState()
   const container = document.getElementById("output");
   container.innerHTML = "";
@@ -1954,8 +1954,10 @@ function render(customVerses = null, inDouble = false) {
   return;
 }
 
+let otherPanel = false;
+
 function createClickableSpan(className, text, wordEl) {
-  if (debugModeExtra) console.log("createClickableSpan()");
+  if (debugModeExtra) console.log("createClickableSpan()"); // Excessive calls
   const span = document.createElement("span");
   span.className = className;
   if (elements.customFormat.checked && className === "eng") {
@@ -1971,6 +1973,12 @@ function createClickableSpan(className, text, wordEl) {
       const term =
         span.dataset.search ||
         span.textContent.trim().split(/\s+/)[0];
+
+      const panel = span.closest(".panel");
+      const panelId = panel?.id || null;
+      if (panelId === "notput") otherPanel = true;
+      else otherPanel = false;
+      
       elements.searchInput.value = term;
       searchVerses();
     }
@@ -2457,6 +2465,11 @@ function showPopup(e) {
   const interlinDisp = toInterlin(grk);
   const rootsDisplay = toGreek(rootsRaw);
 
+  const panel = target.closest(".panel");
+  const panelId = panel?.id || null;
+  if (panelId === "notput") otherPanel = true;
+  else otherPanel = false;
+
   // Helper to wrap values with clickable spans and add data attribute for searching
   function clickableLine(label, value) {
     if (!value) return '';
@@ -2533,7 +2546,7 @@ function showPopup(e) {
       const text = event.target.dataset.search.trim();
       if (text) {
         elements.searchInput.value = text;
-        popup.style.display = 'none';
+        if (!otherPanel) popup.style.display = 'none';
         searchVerses();
       }
     });
@@ -2545,7 +2558,7 @@ function showPopup(e) {
       const text = event.target.dataset.search.trim();
       if (text) {
         elements.searchInput.value = text;
-        popup.style.display = 'none';
+        if (!otherPanel) popup.style.display = 'none';
         searchVerses();
       }
     });
@@ -2573,7 +2586,7 @@ function showPopup(e) {
 }
 
 function showPopupDelay(event) {
-  if (debugMode) console.log("showPopupDelay()");
+  if (debugModeExtra) console.log("showPopupDelay()"); // Excessive calls
   currentPopup = event.target;
   popupActivatedAt = Date.now();  // Track when it was shown
   // Clear any previous timer (if user quickly moves between elements)
@@ -2587,7 +2600,7 @@ function showPopupDelay(event) {
 }
 
 function hidePopup() {
-  if (debugMode) console.log("hidePopup()");
+  if (debugModeExtra) console.log("hidePopup()"); // Excessive calls
   clearTimeout(popupDelayTimer);
   popupTimeout = setTimeout(() => {
     document.getElementById("wordPopup").style.display = "none";
@@ -2605,7 +2618,7 @@ function immediateHidePopup() {
 }
 
 function cancelHidePopup() {
-  if (debugMode) console.log("cancelHidePopup()");
+  if (debugModeExtra) console.log("cancelHidePopup()"); // Excessive calls
   clearTimeout(popupTimeout);
 }
 
@@ -3349,6 +3362,11 @@ function handleLookupMatches(searchTerm, matches) {
 function handleWordMatches(term, matches) {
   if (debugMode) console.log("setReferenceRange()");
   let exact = elements.exactMatch.checked;
+  let not = false;
+  if (term.startsWith('~')) {
+    not = true;
+    term = term.slice(1);
+  }
   if (term.startsWith('=')) {
     exact = true;
     term = term.slice(1);
@@ -3363,7 +3381,8 @@ function handleWordMatches(term, matches) {
   forEachVerse((b, c, v, verseData) => {
     verseData.forEach(([ident, eng]) => {
       const word = (eng || "").toLowerCase();
-      const isMatch = exact ? word === searchTerm : word.includes(searchTerm);
+      let isMatch = exact ? word === searchTerm : word.includes(searchTerm);
+      if (not) isMatch = !isMatch;
 
       if (isMatch) {
         if (count >= startIndex && count < endIndex) {
@@ -3430,12 +3449,7 @@ function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
       return searchWord.includes(tokenVal[0]);
     } else {
       let lowerToken = tokenVal[1].toLowerCase();
-      let exact = elements.exactMatch.checked;
-      if (lowerToken.startsWith('=')) {
-        exact = true;
-        lowerToken = lowerToken.slice(1);
-      }
-      return exact ? (lowerToken === searchWord) : lowerToken.includes(searchWord);
+      return termMatch(searchWord, lowerToken)
     }
   }
 
@@ -3519,6 +3533,21 @@ function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
   }
 
   return false; // no match
+}
+
+function termMatch(term, word) {
+  let exact = elements.exactMatch.checked;
+  let not = false;
+  if (term.startsWith('~')) {
+    not = true;
+    term = term.slice(1);
+  }
+  if (term.startsWith('=')) {
+    exact = true;
+    term = term.slice(1);
+  }
+  let result = exact ? word === term : word.includes(term);
+  return not ? !result : result
 }
 
 function multiWordSearch(searchStr, lookupInd) {
@@ -3614,25 +3643,14 @@ function multiWordSearch(searchStr, lookupInd) {
         if (!Number.isInteger(ident) && !Number.isInteger(shortestLookup[0])) { // If ident is stored as a greek word. BEGIN LXX Helper
           const wordG = toGreek(ident);
           let target = shortestLookup[0];
-          let exact = elements.exactMatch.checked;
-          if (target.startsWith('=')) {
-            exact = true;
-            target = target.slice(1);
-          }
-
-          return exact ? wordG === target : wordG.includes(target);
+          return termMatch(target, wordG);
         } // END LXX Helper
         return shortestLookup.includes(ident);
       } else if (typeof shortestLookup === "string" && !/[α-ω]/i.test(shortestLookup)) {
         // Fallback: match by English text
         const wordEng = (wordEnglish || "").toLowerCase();
-        let exact = elements.exactMatch.checked;
         let target = shortestLookup;
-        if (target.startsWith('=')) {
-          exact = true;
-          target = target.slice(1);
-        }
-        return exact ? wordEng === target : wordEng.includes(target);
+        return termMatch(target, wordEng);
       } 
       return false;
     });
@@ -3713,7 +3731,7 @@ function multiWordSearch(searchStr, lookupInd) {
 }
 
 function matchesLookup(term, value) {
-  if (debugMode) console.log("matchesLookup()");
+  if (debugModeExtra) console.log("matchesLookup()"); // Excessive Calls
   let exact = elements.exactMatch.checked;
   let result = true;
 
