@@ -1956,7 +1956,7 @@ function render(customVerses = null, inDouble = false) {
 
 let otherPanel = false;
 
-function createClickableSpan(className, text, wordEl) {
+function createClickableSpan(className, text, wordEl, altsearch=null) {
   if (debugModeExtra) console.log("createClickableSpan()"); // Excessive calls
   const span = document.createElement("span");
   span.className = className;
@@ -1965,6 +1965,8 @@ function createClickableSpan(className, text, wordEl) {
   } else {
     span.textContent = text;
   }
+
+  if (altsearch) span.dataset.search = altsearch;
 
   span.addEventListener("click", (e) => {
     const isPopupActive = wordEl === currentPopup;
@@ -2189,11 +2191,19 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
       wordEl.appendChild(createClickableSpan("pcode", value, wordEl));
     }
 
-    function appendEng(wordEl, pEng) {
-      if (elements.customFormat.checked) {
-        wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl));
+    function appendEng(wordEl, pEng, rEng) {
+      if (!elements.normalized.checked || pEng === rEng) {
+        if (elements.customFormat.checked) {
+          wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl, pEng));
+        } else {
+          wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
+        }
       } else {
-        wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
+        if (elements.customFormat.checked) {
+          wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl, rEng));
+        } else {
+          wordEl.appendChild(createClickableSpan("eng", pEng, wordEl, rEng));
+        }
       }
     }
 
@@ -2229,7 +2239,7 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
     if (reverseInterlinear) {
       if (showEnglish) {
         if (pEng) {
-          appendEng(wordEl, pEng);
+          appendEng(wordEl, pEng, rEng);
           hasContent = true;
         } else {
           appendSpacer(wordEl, "eng");
@@ -2262,7 +2272,7 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
     if (!reverseInterlinear) {
       if (showEnglish) {
         if (pEng) {
-          appendEng(wordEl, pEng);
+          appendEng(wordEl, pEng, rEng);
           hasContent = true;
         } else {
           appendSpacer(wordEl, "eng");
@@ -3190,7 +3200,7 @@ function refSearch(searchTerm) {
 function searchVerses() {
   if (debugMode) console.log("searchVerses()");
   saveSettings('save-id');
-  const searchTerm = elements.searchInput.value.trim();
+  let searchTerm = elements.searchInput.value.trim();
   const showContext = elements.showContext.checked;
   const uniqueWords = elements.uniqueWords.checked;
   const normalized = elements.normalized.checked;
@@ -3201,6 +3211,12 @@ function searchVerses() {
     container.innerHTML = '<p>Please enter a search term.</p>';
     if (debugMode) console.log("end searchVerses()");
     return;
+  }
+
+  if (normalized) {
+    searchTerm = searchTerm.replace(/,|\.|:|"|'|;|\[\?\]|!/g, '');
+    elements.searchInput.value = searchTerm
+    saveSettings('save-id');
   }
 
   // Reset state if new term or new search size, or new context size.
