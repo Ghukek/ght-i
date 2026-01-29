@@ -138,7 +138,8 @@ function togglePopup(id) {
     let top = rect.bottom + window.scrollY;
 
     // Adjust max height so popup doesn't overflow viewport
-    const maxHeight = viewportHeight - rect.bottom - 18; // 10px margin
+    let maxHeight = viewportHeight - rect.bottom - 18; // 10px margin
+    maxHeight = Math.max(maxHeight, 120); // Give it at least some height.
     popup.style.maxHeight = `${maxHeight}px`;
 
     popup.style.top = `${top}px`;
@@ -1923,16 +1924,22 @@ function render(customVerses = null, inDouble = false) {
         const verseData = baseData[b][c][v];
         if (!verseData) continue;
 
-        ({ passUnderscore, countContext } = renderSingleVerse(container, b, c, v, verseData, {
+        ({ passUnderscore, countContext, verseEl } = renderSingleVerse(
+          container, b, c, v, 
+          verseData, 
+          {
           showVerses,
           reverseInterlinear,
           passUnderscore,
           countContext,
           contextBool
-        }));
+          },
+          verseEl
+        ));
 
         count++
         if (count >= parseInt(elements.searchSize.value, 10)) {
+          container.append(verseEl)
           container.innerHTML += `<p><b>${elements.searchSize.value} verses displayed. Limit reached. Increase this limit in 'Display Settings' if you want to render more.</b></p>`;
           elements.gapInput.value = count;
           elements.bookEnd.value = b;
@@ -1945,6 +1952,7 @@ function render(customVerses = null, inDouble = false) {
       }
     }
   }
+  container.append(verseEl)
   elements.gapInput.value = count;
   if (centerFromSearch) {
     container.scrollTop = (container.scrollHeight - container.clientHeight) / 2;
@@ -2003,16 +2011,27 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
 
   let localPassUnderscore = passUnderscore;
   let localCountContext = countContext;
+
+  if (chapter === 0 && verse === 0 && verseElin) {
+    container.appendChild(verseElin);
+    verseElin = null;
+
+    const separator = document.createElement('hr');
+    separator.classList.add('search-separator');
+    container.appendChild(separator);
+
+    localCountContext = 0;
+  } 
+
+  let verseRange = parseInt(elements.gapInput.value, 10);
+
   let verseEl = null;
   if (verseElin) {
     verseEl = verseElin;
-  } else if (newlineAfterVerse || contextBool) {
+  } else {
     verseEl = document.createElement("div");
     verseEl.className = "verse";
-  } else {
-    verseEl = container;
-  }
-  let verseRange = parseInt(elements.gapInput.value, 10);
+  } 
 
   if (showVerses && verse !== -1) {
     let fullLabel = `${bookAbb[book]} ${chapter + 1}:${verse + 1}`;
@@ -2396,7 +2415,7 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
     container.appendChild(separator);
 
     localCountContext = 0;
-  }
+  } 
 
   return {
     passUnderscore: localPassUnderscore, countContext: localCountContext, verseEl
@@ -2911,7 +2930,7 @@ function parseCGPN(cgpn) {
   };
 
   const genderMap = {
-    'M': 'masculine', 'F': 'feminine', 'N': 'neuter', '~': 'any gender', 
+    'M': 'masculine', 'F': 'feminine', 'N': 'neuter', 'X': 'any gender', 
     'H': 'masculine/feminine', 'W': 'masculine/neuter'
   };
 
@@ -3177,6 +3196,7 @@ function forEachVerse(callback) {
 
 let searchState = {
   term: null,         // current search term
+  exactMatch: null,
   contextCount: 0,     // Current gapInput
   page: 0,            // current page index
   pageSize: 10,      // max results per page
@@ -3199,11 +3219,11 @@ function refSearch(searchTerm) {
 
 function searchVerses() {
   if (debugMode) console.log("searchVerses()");
-  saveSettings('save-id');
   let searchTerm = elements.searchInput.value.trim();
   const showContext = elements.showContext.checked;
   const uniqueWords = elements.uniqueWords.checked;
   const normalized = elements.normalized.checked;
+  const exactMatch = elements.exactMatch.checked;
   const container = document.getElementById('output');
   container.innerHTML = ''; // clear existing output
 
@@ -3216,13 +3236,15 @@ function searchVerses() {
   if (normalized) {
     searchTerm = searchTerm.replace(/,|\.|:|"|'|;|\[\?\]|!/g, '');
     elements.searchInput.value = searchTerm
-    saveSettings('save-id');
   }
 
+  saveSettings('save-id');
+
   // Reset state if new term or new search size, or new context size.
-  if (searchTerm !== searchState.term || parseInt(elements.searchSize.value) !== searchState.pageSize || parseInt(elements.gapInput.value) !== searchState.contextCount) {
+  if (searchTerm !== searchState.term || parseInt(elements.searchSize.value) !== searchState.pageSize || parseInt(elements.gapInput.value) !== searchState.contextCount || exactMatch !== searchState.exactMatch) {
     searchState = {
       term: searchTerm,
+      exactMatch: exactMatch,
       contextCount: parseInt(elements.gapInput.value),
       page: 0,
       pageSize: parseInt(elements.searchSize.value),
@@ -4524,7 +4546,7 @@ function updatePanelHeight() {
       const bottomOfBottomEl = bottomEl.getBoundingClientRect().bottom;
       const topOfTopEl = topEl.getBoundingClientRect().top;
       
-      height = Math.max(0, topOfTopEl - bottomOfBottomEl - 10);
+      height = Math.max(150, topOfTopEl - bottomOfBottomEl - 10);
     } else {
       // Fallback if either element is missing
       height = window.innerHeight;
