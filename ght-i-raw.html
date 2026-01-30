@@ -134,7 +134,13 @@
     <label title="Sets a second panel below the first."><input type="checkbox" id="vertPanel" data-id global-setting onclick="setMode('vert')" autocomplete="off"> 2nd Panel Below</label><br>
     <label title="Extend the height of the panels to 90% of the screen."><input type="checkbox" id="smallScreen" data-id global-setting onclick="setMode()" autocomplete="off"> Taller Panels</label><br>
     <label title="Link both panels. Useful for side-by-side reading."><input type="checkbox" id="linkPanels" data-id global-setting onclick="render()" autocomplete="off"> Parallel Mode</label><br>
-    <button id="swapPanelsBtn">Swap Panels</button>
+    <button id="swapPanelsBtn">Swap Panels</button><br>
+    <label for="translationSelect">Select Translation:</label>
+    <select id="translationSelect" autocomplete="off">
+      <option value="none" selected>None</option>
+      <option value="kjv">KJV</option>
+      <!-- Add more translations here -->
+    </select>
   </div>
   <div id="sharePopup" class="popup menu-popup">
     <span title="Select which properties to show on screen; any left unchecked will show in the word popup." class="head-group3">
@@ -229,6 +235,12 @@
   <div id="wordPopup" class="popup"
       onmouseover="cancelHidePopup()"
       onmouseout="hidePopup()">
+  </div>
+  <div id="translationModal">
+    <div id="modalContent">
+      <p id="modalText"></p>
+      <button id="ackButton">Acknowledge</button>
+    </div>
   </div>
   <div id="navHeader">
     <!-- <button onclick="updateBCV(-3)">◀Book</button> -->

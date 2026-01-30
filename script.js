@@ -236,6 +236,7 @@ async function updateToolLastUpdated() {
 
 // Run it
 updateToolLastUpdated();
+let compData;
 // DO NOT TOUCH THE NEXT TWO LINES They are removed by the compile script.
 let baseData;
 let lookupdb;
@@ -1910,18 +1911,21 @@ function render(customVerses = null, inDouble = false) {
   let lastChapter = null;
   let count = 0;
 
+  const useBaseData = (document.getElementById("translationSelect").value === "none" || getActivePanelId() === 0) ? true : false;
+  let currData = useBaseData ? baseData : compData;
+
   for (let b = bookStart; b <= bookEnd; b++) {
-    if (!baseData[b]) continue;
+    if (!currData[b]) continue;
     const cStart = (b === bookStart) ? chapterStart : 0;
-    const cEnd = (b === bookEnd) ? chapterEnd : baseData[b].length;
+    const cEnd = (b === bookEnd) ? chapterEnd : currData[b].length;
 
     for (let c = cStart; c <= cEnd; c++) {
-      if (!baseData[b][c]) continue;
+      if (!currData[b][c]) continue;
       const vStart = (b === bookStart && c === chapterStart) ? verseStart : 0;
-      const vEnd = (b === bookEnd && c === chapterEnd) ? verseEnd : baseData[b][c].length;
+      const vEnd = (b === bookEnd && c === chapterEnd) ? verseEnd : currData[b][c].length;
 
       for (let v = vStart; v <= vEnd; v++) {
-        const verseData = baseData[b][c][v];
+        const verseData = currData[b][c][v];
         if (!verseData) continue;
 
         ({ passUnderscore, countContext, verseEl } = renderSingleVerse(
@@ -2562,7 +2566,8 @@ function showPopup(e) {
   }
 
   if (popupContent.length === 0) {
-    popupContent = "[No info]"
+    //popupContent = "[No info]"
+    return
   }
 
   popup.innerHTML = popupContent;
@@ -3136,6 +3141,9 @@ function collectVerseMatches(b, c, v) {
   const centerRange = elements.centerRange.checked;
   const results = [];
 
+  const useBaseData = (document.getElementById("translationSelect").value === "none" || getActivePanelId() === 0) ? true : false;
+  let currData = useBaseData ? baseData : compData;
+
   let startOffset, endOffset;
 
   if (verseRange > 1) {
@@ -3152,12 +3160,12 @@ function collectVerseMatches(b, c, v) {
       const [nb, nc, nv, er] = addVerses(b, c, v, offset, 1);
 
       // Check if verse is valid
-      if (baseData[nb]?.[nc]?.[nv] && !er) {
+      if (currData[nb]?.[nc]?.[nv] && !er) {
         results.push({
           book: nb,
           chapter: nc,
           verse: nv,
-          verseData: baseData[nb][nc][nv]
+          verseData: currData[nb][nc][nv]
         });
       } else {
         results.push({
@@ -3169,7 +3177,7 @@ function collectVerseMatches(b, c, v) {
       }
     }
   } else {
-    if (baseData[b]?.[c]?.[v]) {
+    if (currData[b]?.[c]?.[v]) {
       results.push({ book: b, chapter: c, verse: v, verseData: baseData[b][c][v] });
     } else {
       results.push({ book: -1, chapter: -1, verse: -1, verseData: [] });
@@ -3180,13 +3188,16 @@ function collectVerseMatches(b, c, v) {
 }
 
 function forEachVerse(callback) {
+  const useBaseData = (document.getElementById("translationSelect").value === "none" || getActivePanelId() === 0) ? true : false;
+  let currData = useBaseData ? baseData : compData;
+
   if (debugMode) console.log("forEachVerse()");
-  for (let b = 0; b < baseData.length; b++) {
-    if (!baseData[b]) continue;
-    for (let c = 0; c < baseData[b].length; c++) {
-      if (!baseData[b][c]) continue;
-      for (let v = 0; v < baseData[b][c].length; v++) {
-        const verseData = baseData[b][c][v];
+  for (let b = 0; b < currData.length; b++) {
+    if (!currData[b]) continue;
+    for (let c = 0; c < currData[b].length; c++) {
+      if (!currData[b][c]) continue;
+      for (let v = 0; v < currData[b][c].length; v++) {
+        const verseData = currData[b][c][v];
         if (!verseData) continue;
         callback(b, c, v, verseData);
       }
@@ -4560,6 +4571,56 @@ function updatePanelHeight() {
 window.addEventListener("resize", updatePanelHeight);
 window.addEventListener("orientationchange", updatePanelHeight);
 document.addEventListener("DOMContentLoaded", updatePanelHeight);
+
+// Parallel mode
+
+const translations = {
+  kjv: "kjv.json" // path to your KJV JSON file
+  // Add more translation paths here
+};
+
+const translationsx = {
+  kjv: "kjvx.json" // path to your KJV JSON file
+  // Add more translation paths here
+};
+
+const select = document.getElementById("translationSelect");
+const translationModal = document.getElementById("translationModal");
+const modalText = document.getElementById("modalText");
+const ackButton = document.getElementById("ackButton");
+
+select.addEventListener("change", async function() {
+  togglePopup("panelPopup");
+  const selected = select.value;
+  if(selected === "none") {
+    compData = null;
+    return;
+  }
+
+  // Show modal with warning
+  modalText.textContent = 
+    "The GHT team is not responsible for the content of this translation and its inclusion in this tool should not be considered endorsement. Any errors, omissions, additions, or interpretations remain the responsibility of the translation source organization.";
+  translationModal.style.display = "block";
+
+  // Wait for user acknowledgment
+  ackButton.onclick = async function() {
+    saveSettings();
+    translationModal.style.display = "none";
+    
+    // Load JSON file
+    const params = new URLSearchParams(window.location.search);
+    const path = params.get("db") === "basex" ? translationsx[selected] : translations[selected];
+    try {
+      const response = await fetch(path);
+      compData = await response.json();
+      console.log(`Loaded ${selected} translation into compData.`);
+    } catch(err) {
+      console.error("Error loading translation JSON:", err);
+      compData = null;
+    }
+  };
+});
+
 
 // Load initial data from server.
 loadBaseJson();
