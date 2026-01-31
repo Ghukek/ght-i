@@ -4575,8 +4575,11 @@ document.addEventListener("DOMContentLoaded", updatePanelHeight);
 // Parallel mode
 
 const translations = {
-  kjv: "kjv.json" // path to your KJV JSON file
-  // Add more translation paths here
+  kjv: "kjv.json" ,
+  wkjv: "webster.json",
+  gen: "geneva.json",
+  tyn: "tyndale.json",
+  wyc: "wycliffe.json"
 };
 
 const translationsx = {
@@ -4588,6 +4591,7 @@ const select = document.getElementById("translationSelect");
 const translationModal = document.getElementById("translationModal");
 const modalText = document.getElementById("modalText");
 const ackButton = document.getElementById("ackButton");
+const nackButton = document.getElementById("nackButton");
 
 select.addEventListener("change", async function() {
   togglePopup("panelPopup");
@@ -4619,6 +4623,10 @@ select.addEventListener("change", async function() {
       compData = null;
     }
   };
+  nackButton.onclick = async function() {
+    select.value = "none";
+    translationModal.style.display = "none";
+  }
 });
 
 
