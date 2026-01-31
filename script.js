@@ -4592,6 +4592,7 @@ const translationModal = document.getElementById("translationModal");
 const modalText = document.getElementById("modalText");
 const ackButton = document.getElementById("ackButton");
 const nackButton = document.getElementById("nackButton");
+let modalShown = false;
 
 select.addEventListener("change", async function() {
   togglePopup("panelPopup");
@@ -4601,33 +4602,55 @@ select.addEventListener("change", async function() {
     return;
   }
 
-  // Show modal with warning
-  modalText.textContent = 
-    "The GHT team is not responsible for the content of this translation and its inclusion in this tool should not be considered endorsement. Any errors, omissions, additions, or interpretations remain the responsibility of the translation source organization.";
-  translationModal.style.display = "block";
+  if(!modalShown) {
+    // Show modal with warning
+    modalText.textContent = 
+      "The GHT team is not responsible for the content of other translations, and their inclusion in this tool should not be considered endorsement. Any errors, omissions, additions, or interpretations remain the responsibility of the translation source organization.";
+    translationModal.style.display = "block";
 
-  // Wait for user acknowledgment
-  ackButton.onclick = async function() {
-    saveSettings();
-    translationModal.style.display = "none";
-    
-    // Load JSON file
-    const params = new URLSearchParams(window.location.search);
-    const path = params.get("db") === "basex" ? translationsx[selected] : translations[selected];
-    try {
-      const response = await fetch(path);
-      compData = await response.json();
-      console.log(`Loaded ${selected} translation into compData.`);
-    } catch(err) {
-      console.error("Error loading translation JSON:", err);
-      compData = null;
-    }
-  };
-  nackButton.onclick = async function() {
-    select.value = "none";
-    translationModal.style.display = "none";
+    // Wait for user acknowledgment
+    ackButton.onclick = async function() {
+      saveSettings();
+      translationModal.style.display = "none";
+
+      // Mark modal as shown for this session
+      modalShown = true;
+
+      await loadTranslation(selected);
+    };
+
+    nackButton.onclick = async function() {
+      select.value = "none";
+      translationModal.style.display = "none";
+    };
+  } else {
+    // Modal already shown, just load the translation
+    await loadTranslation(selected);
   }
 });
+
+// Extract translation loading logic for reuse
+async function loadTranslation(selected) {
+  const params = new URLSearchParams(window.location.search);
+  const path = params.get("db") === "basex" ? translationsx[selected] : translations[selected];
+  try {
+    const response = await fetch(path);
+    compData = await response.json();
+    console.log(`Loaded ${selected} translation into compData.`);
+  } catch(err) {
+    console.error("Error loading translation JSON:", err);
+    compData = null;
+  }
+
+  let activePanel = getActivePanelId();
+  if (activePanel === 0) { 
+    activate(outputContainer.querySelector(`[data-panel-i-d="1"]`));
+  }
+  onOptionsChange();
+  if (activePanel === 0) {
+    activate(outputContainer.querySelector(`[data-panel-i-d="0"]`));
+  }
+}
 
 
 // Load initial data from server.
