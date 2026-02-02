@@ -1835,9 +1835,11 @@ function render(customVerses = null, inDouble = false) {
           return span;
         };
 
+        const engV = (select.value === "none" || getActivePanelId() === 0) ? "english" : "englishAlt";
+
         // Conditionally add selected columns
         if (showGreek)   row.appendChild(makePopupCell("greek", toGreek(grk)));
-        if (showEnglish) row.appendChild(makePopupCell("english", eng || ""));
+        if (showEnglish) row.appendChild(makePopupCell(engV, eng || ""));
         if (showPcode)   row.appendChild(makePopupCell("pcode", pcode || ""));
         if (showStrongs) row.appendChild(makePopupCell("strongs", strongs || ""));
         if (showRoots) {
@@ -1911,7 +1913,7 @@ function render(customVerses = null, inDouble = false) {
   let lastChapter = null;
   let count = 0;
 
-  const useBaseData = (document.getElementById("translationSelect").value === "none" || getActivePanelId() === 0) ? true : false;
+  const useBaseData = (select.value === "none" || getActivePanelId() === 0) ? true : false;
   let currData = useBaseData ? baseData : compData;
 
   for (let b = bookStart; b <= bookEnd; b++) {
@@ -2215,17 +2217,18 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
     }
 
     function appendEng(wordEl, pEng, rEng) {
+      const engV = (select.value === "none" || getActivePanelId() === 0) ? "eng" : "compEng";
       if (!elements.normalized.checked || pEng === rEng) {
         if (elements.customFormat.checked) {
-          wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl, pEng));
+          wordEl.appendChild(createClickableSpan(engV, processFormatting(pEng), wordEl, pEng));
         } else {
-          wordEl.appendChild(createClickableSpan("eng", pEng, wordEl));
+          wordEl.appendChild(createClickableSpan(engV, pEng, wordEl));
         }
       } else {
         if (elements.customFormat.checked) {
-          wordEl.appendChild(createClickableSpan("eng", processFormatting(pEng), wordEl, rEng));
+          wordEl.appendChild(createClickableSpan(engV, processFormatting(pEng), wordEl, rEng));
         } else {
-          wordEl.appendChild(createClickableSpan("eng", pEng, wordEl, rEng));
+          wordEl.appendChild(createClickableSpan(engV, pEng, wordEl, rEng));
         }
       }
     }
@@ -2511,7 +2514,8 @@ function showPopup(e) {
 
   let popupContent = '';
 
-  if (!showGreek) {
+  if (!showGreek && grkDisplay !== "&nbsp;") {
+    console.log(grkDisplay);
     popupContent += clickableLine('Greek', grkDisplay);
   }
 
@@ -3141,7 +3145,7 @@ function collectVerseMatches(b, c, v) {
   const centerRange = elements.centerRange.checked;
   const results = [];
 
-  const useBaseData = (document.getElementById("translationSelect").value === "none" || getActivePanelId() === 0) ? true : false;
+  const useBaseData = (select.value === "none" || getActivePanelId() === 0) ? true : false;
   let currData = useBaseData ? baseData : compData;
 
   let startOffset, endOffset;
@@ -3188,7 +3192,7 @@ function collectVerseMatches(b, c, v) {
 }
 
 function forEachVerse(callback) {
-  const useBaseData = (document.getElementById("translationSelect").value === "none" || getActivePanelId() === 0) ? true : false;
+  const useBaseData = (select.value === "none" || getActivePanelId() === 0) ? true : false;
   let currData = useBaseData ? baseData : compData;
 
   if (debugMode) console.log("forEachVerse()");
@@ -3230,6 +3234,7 @@ function refSearch(searchTerm) {
 
 function searchVerses() {
   if (debugMode) console.log("searchVerses()");
+  const altVersion = (select.value === "none" || getActivePanelId() === 0) ? false : true;
   let searchTerm = elements.searchInput.value.trim();
   const showContext = elements.showContext.checked;
   const uniqueWords = elements.uniqueWords.checked;
@@ -3245,7 +3250,7 @@ function searchVerses() {
   }
 
   if (normalized) {
-    searchTerm = searchTerm.replace(/,|\.|:|"|'|;|\[\?\]|!/g, '');
+    searchTerm = searchTerm.replace(/,|\.|\(|\)|:|"|”|“|'|;|\[\?\]|!/g, '');
     elements.searchInput.value = searchTerm
   }
 
@@ -3285,7 +3290,7 @@ function searchVerses() {
   let inLookups = lookInLookups(searchTerm);
 
   // Case: Latin, not in lookups, and not normalized → raw term search
-  if (!/[α-ω]/i.test(searchTerm) && !inLookups && !normalized && !uniqueWords) {
+  if (!/[α-ω]/i.test(searchTerm) && !inLookups && (!normalized || altVersion) && (!uniqueWords || altVersion)) {
     handleWordMatches(searchTerm, matches);
   } else {
     handleLookupMatches(searchTerm, matches);
@@ -3412,6 +3417,8 @@ function handleWordMatches(term, matches) {
   if (debugMode) console.log("setReferenceRange()");
   let exact = elements.exactMatch.checked;
   let not = false;
+  const normalized = elements.normalized.checked;
+
   if (term.startsWith('~')) {
     not = true;
     term = term.slice(1);
@@ -3420,7 +3427,12 @@ function handleWordMatches(term, matches) {
     exact = true;
     term = term.slice(1);
   }
-  const searchTerm = term.toLowerCase();
+  let searchTerm = term.toLowerCase();
+
+  if (normalized) {
+    searchTerm = searchTerm.replace(/,|\.|\(|\)|:|"|”|“|'|;|\[\?\]|!/g, '');
+    elements.searchInput.value = searchTerm
+  }
 
   const startIndex = searchState.boundaries[searchState.page];
   const endIndex = startIndex + parseInt(elements.searchSize.value, 10);
@@ -3429,7 +3441,10 @@ function handleWordMatches(term, matches) {
 
   forEachVerse((b, c, v, verseData) => {
     verseData.forEach(([ident, eng]) => {
-      const word = (eng || "").toLowerCase();
+      let word = (eng || "").toLowerCase();
+      if (normalized) {
+        word = word.replace(/,|\.|\(|\)|:|"|”|“|'|;|\[\?\]|!/g, '');
+      }
       let isMatch = exact ? word === searchTerm : word.includes(searchTerm);
       if (not) isMatch = !isMatch;
 

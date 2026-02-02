@@ -152,9 +152,9 @@ body {
   cursor: pointer;
 }
 
-.eng { 
+.compEng { 
   font-size: var(--font-size-english);
-  color: rgb(0, 75, 0); 
+  color: #1b0e07;
   cursor: pointer;
 }
 
@@ -194,7 +194,7 @@ body {
 }
 
 /* Default hover */
-.roots:hover, .pcode:hover, .eng:hover, .grk:hover, .col:hover, .verse-label:hover, #toggleGreekHelp:hover {
+.roots:hover, .pcode:hover, .eng:hover, .compEng:hover, .grk:hover, .col:hover, .verse-label:hover, #toggleGreekHelp:hover {
   background-color: var(--highlight-overlay);
   box-shadow: 0 0 6px 2px var(--highlight-overlay);
   border-radius: 5px; /* optional, soft corners */
@@ -375,6 +375,10 @@ select {
 
 .word-list-grid .english {
   color: rgb(0, 75, 0);
+}
+
+.word-list-grid .englishAlt {
+  color: #1b0e07;
 }
 
 .word-list-grid .greek {
