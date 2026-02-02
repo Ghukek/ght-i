@@ -135,14 +135,19 @@
     <label title="Extend the height of the panels to 90% of the screen."><input type="checkbox" id="smallScreen" data-id global-setting onclick="setMode()" autocomplete="off"> Taller Panels</label><br>
     <label title="Link both panels. Useful for side-by-side reading."><input type="checkbox" id="linkPanels" data-id global-setting onclick="render()" autocomplete="off"> Parallel Mode</label><br>
     <button id="swapPanelsBtn">Swap Panels</button><br>
-    <label for="translationSelect">Select Translation:</label>
+    <label title="Select a second translation as a comparison." for="translationSelect">Parallel Translation:</label><br>
     <select id="translationSelect" autocomplete="off">
       <option value="none" selected>None</option>
-      <option value="kjv">KJV</option>
-      <option value="wyc">WYC</option>
-      <option value="tyn">TYN</option>
-      <option value="gen">GEN</option>
-      <option value="wkjv">wKJV</option>
+      <option value="bsb">Berean Standard Bible</option>
+      <option value="msb">Majority Standard Bible</option>
+      <option value="web">World English Bible 2020</option>
+      <option value="kjv">King James 1769</option>
+      <option value="kjv1611">King James 1611</option>
+      <option value="gen">Geneva 1599</option>
+      <option value="tyn">Tyndale 1534</option>
+      <option value="tynsp">Tyndale 1526 (Modern Spelling)</option>
+      <option value="wyc">Wycliffe 1395</option>
+      <option value="wycsp">Wycliffe 1395 (Modern Spelling)</option>
     </select>
   </div>
   <div id="sharePopup" class="popup menu-popup">

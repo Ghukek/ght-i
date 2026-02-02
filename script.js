@@ -4575,16 +4575,29 @@ document.addEventListener("DOMContentLoaded", updatePanelHeight);
 // Parallel mode
 
 const translations = {
-  kjv: "kjv.json" ,
-  wkjv: "webster.json",
-  gen: "geneva.json",
-  tyn: "tyndale.json",
-  wyc: "wycliffe.json"
+  kjv: "KJV1769.json" ,
+  gen: "Gen1599.json",
+  tyn: "Tyn1534.json",
+  wyc: "Wycliffe.json",
+  web: "WEB.json",
+  bsb: "BSB.json",
+  msb: "MSB.json",
+  wycsp: "WycSP.json",
+  tynsp: "Tyn1526SP.json",
+  kjv1611: "KJV1611.json",
 };
 
 const translationsx = {
-  kjv: "kjvx.json" // path to your KJV JSON file
-  // Add more translation paths here
+  kjv: "KJV1769x.json" ,
+  gen: "Gen1599x.json",
+  tyn: "Tyn1534x.json",
+  wyc: "Wycliffex.json",
+  web: "WEBx.json",
+  bsb: "BSBx.json",
+  msb: "MSBx.json",
+  wycsp: "WycSPx.json",
+  tynsp: "Tyn1526SP.json",
+  kjv1611: "KJV1611x.json",
 };
 
 const select = document.getElementById("translationSelect");
@@ -4594,18 +4607,30 @@ const ackButton = document.getElementById("ackButton");
 const nackButton = document.getElementById("nackButton");
 let modalShown = false;
 
+function changeAltTranslation() {
+  let activePanel = getActivePanelId();
+  if (activePanel === 0) { 
+    activate(outputContainer.querySelector(`[data-panel-i-d="1"]`));
+  }
+  onOptionsChange();
+  if (activePanel === 0) {
+    activate(outputContainer.querySelector(`[data-panel-i-d="0"]`));
+  }
+}
+
 select.addEventListener("change", async function() {
   togglePopup("panelPopup");
   const selected = select.value;
   if(selected === "none") {
     compData = null;
+    changeAltTranslation();
     return;
   }
 
   if(!modalShown) {
     // Show modal with warning
-    modalText.textContent = 
-      "The GHT team is not responsible for the content of other translations, and their inclusion in this tool should not be considered endorsement. Any errors, omissions, additions, or interpretations remain the responsibility of the translation source organization.";
+    modalText.innerHTML = 
+      "The GHT team is not responsible for the content of other translations, and their inclusion in this tool should not be considered endorsement. Any errors, omissions, additions, or interpretations remain the responsibility of the translation source organization.<br><br>All translations provided here are Public Domain, see <a href='https://ghukek.com/jsonsource.html'>here</a> for a list of sources.";
     translationModal.style.display = "block";
 
     // Wait for user acknowledgment
@@ -4642,14 +4667,7 @@ async function loadTranslation(selected) {
     compData = null;
   }
 
-  let activePanel = getActivePanelId();
-  if (activePanel === 0) { 
-    activate(outputContainer.querySelector(`[data-panel-i-d="1"]`));
-  }
-  onOptionsChange();
-  if (activePanel === 0) {
-    activate(outputContainer.querySelector(`[data-panel-i-d="0"]`));
-  }
+  changeAltTranslation();
 }
 
 
