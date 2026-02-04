@@ -1683,6 +1683,7 @@ function render(customVerses = null, inDouble = false) {
   let showVerses = elements.showVerses.checked;
   const reverseInterlinear = elements.reverseInterlinear.checked;
   const altSearch = elements.altSearch.checked;
+  const isFirstPanel = getActivePanelId() === 0;
 
   let passUnderscore = null;
   let countContext = 0;
@@ -1835,7 +1836,7 @@ function render(customVerses = null, inDouble = false) {
           return span;
         };
 
-        const engV = (select.value === "none" || getActivePanelId() === 0) ? "english" : "englishAlt";
+        const engV = (select.value === "none" || isFirstPanel) ? "english" : "englishAlt";
 
         // Conditionally add selected columns
         if (showGreek)   row.appendChild(makePopupCell("greek", toGreek(grk)));
@@ -1889,7 +1890,8 @@ function render(customVerses = null, inDouble = false) {
           countContext,
           contextBool
         },
-        verseEl
+        verseEl,
+        isFirstPanel
       ));
     });
     if (searchState.boundaries.length > 1) {
@@ -1913,7 +1915,7 @@ function render(customVerses = null, inDouble = false) {
   let lastChapter = null;
   let count = 0;
 
-  const useBaseData = (select.value === "none" || getActivePanelId() === 0) ? true : false;
+  const useBaseData = (select.value === "none" || isFirstPanel) ? true : false;
   let currData = useBaseData ? baseData : compData;
 
   for (let b = bookStart; b <= bookEnd; b++) {
@@ -1940,7 +1942,8 @@ function render(customVerses = null, inDouble = false) {
           countContext,
           contextBool
           },
-          verseEl
+          verseEl,
+          isFirstPanel,
         ));
 
         count++
@@ -2003,7 +2006,7 @@ function createClickableSpan(className, text, wordEl, altsearch=null) {
   return span;
 }
 
-function renderSingleVerse(container, book, chapter, verse, verseData, options, verseElin = null) {
+function renderSingleVerse(container, book, chapter, verse, verseData, options, verseElin = null, isFirstPanel) {
   if (debugMode) console.log("renderSingleVerse()");
   const { showGreek, showEnglish, showPcode, showStrongs, showRoots } = getDisplayOptions();
   const newlineAfterVerse = elements.newlineAfterVerse.checked;
@@ -2217,7 +2220,7 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
     }
 
     function appendEng(wordEl, pEng, rEng) {
-      const engV = (select.value === "none" || getActivePanelId() === 0) ? "eng" : "compEng";
+      const engV = (select.value === "none" || isFirstPanel) ? "eng" : "compEng";
       if (!elements.normalized.checked || pEng === rEng) {
         if (elements.customFormat.checked) {
           wordEl.appendChild(createClickableSpan(engV, processFormatting(pEng), wordEl, pEng));
@@ -2701,7 +2704,7 @@ function showPopupTouchEnd(e) {
 const SETTINGS_KEY = "userSettingsV4";
 
 function getActivePanelId() {
-  if (debugMode) console.log("getActivePanelId()");
+  if (debugModeExtra) console.log("getActivePanelId()");
   return Number(document.getElementById("output")?.dataset.panelID || 0);
 }
 
@@ -2725,11 +2728,14 @@ function dumpAllSettings() {
   location.reload();
 }
 
-function saveSettings(targetAttr = null) {
+function saveSettings(targetAttr = null, firstLoad = false) {
   if (debugMode) console.log("saveSettings()");
   // Load existing settings so we only update parts
-  const panelId = getActivePanelId();
+  let panelId = getActivePanelId();
   const data = loadAllSettings();
+  if (panelId === 1 && select.value !== "none" && (data.panels[2] || firstLoad)) {
+    panelId = 2;
+  }
 
   const globalSettings = data.global || {};
   const panelSettings = data.panels[panelId] || {};
@@ -2808,7 +2814,10 @@ function resetSettings(targetAttr = null, panelOnly = null) {
 
 function loadSettings(pageload=true, global=true) {
   if (debugMode) console.log("loadSettings()");
-  const panelId = getActivePanelId();
+  let panelId = getActivePanelId();
+  if (panelId === 1 && select.value !== "none") {
+    panelId = 2;
+  }
   const data = loadAllSettings();
 
   const panelSettings = data.panels[panelId] || {};
@@ -4518,6 +4527,7 @@ function buildPanels(count) {
       activate(panel);
       if (historyIndexes[i] === -1) onOptionsChange();
       else loadState(i, historyIndexes[i])
+      saveSettings();
     }
   }
   activate(outputContainer.firstElementChild);
@@ -4627,9 +4637,18 @@ const nackButton = document.getElementById("nackButton");
 let modalShown = false;
 
 function changeAltTranslation() {
+  if (debugMode) console.log("changeAltTranslation()");
   let activePanel = getActivePanelId();
   if (activePanel === 0) { 
     activate(outputContainer.querySelector(`[data-panel-i-d="1"]`));
+  }
+  let data = loadAllSettings();
+  if (!data.panels[2]) {
+    elements.showGreek.checked = false;
+    elements.showPcode.checked = false;
+    elements.showStrongs.checked = false;
+    elements.showRoots.checked = false;
+    saveSettings(null, true);
   }
   render();
   if (activePanel === 0) {
@@ -4681,6 +4700,7 @@ select.addEventListener("change", async function() {
 
 // Extract translation loading logic for reuse
 async function loadTranslation(selected) {
+  if (debugMode) console.log("loadTranslation()");
   const params = new URLSearchParams(window.location.search);
   const path = params.get("db") === "basex" ? translationsx[selected] : translations[selected];
 
@@ -4700,6 +4720,11 @@ async function loadTranslation(selected) {
   } catch(err) {
     console.error("Error loading translation JSON:", err);
     compData = null;
+  }
+  
+  if (!elements.horizPanel.checked && !elements.vertPanel.checked) {
+    elements.horizPanel.checked = true;
+    setMode("init");
   }
 
   changeAltTranslation();
