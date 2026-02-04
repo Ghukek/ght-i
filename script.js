@@ -2518,7 +2518,6 @@ function showPopup(e) {
   let popupContent = '';
 
   if (!showGreek && grkDisplay !== "&nbsp;") {
-    console.log(grkDisplay);
     popupContent += clickableLine('Greek', grkDisplay);
   }
 
@@ -4604,16 +4603,16 @@ document.addEventListener("DOMContentLoaded", updatePanelHeight);
 // Parallel mode
 
 const translations = {
-  kjv: "KJV1769.json" ,
-  gen: "Gen1599.json",
-  tyn: "Tyn1534.json",
-  wyc: "Wycliffe.json",
-  web: "WEB.json",
-  bsb: "BSB.json",
-  msb: "MSB.json",
-  wycsp: "WycSP.json",
-  tynsp: "Tyn1526SP.json",
-  kjv1611: "KJV1611.json",
+  kjv: "alt/KJV1769.json" ,
+  gen: "alt/Gen1599.json",
+  tyn: "alt/Tyn1534.json",
+  wyc: "alt/Wycliffe.json",
+  web: "alt/WEB.json",
+  bsb: "alt/BSB.json",
+  msb: "alt/MSB.json",
+  wycsp: "alt/WycSP.json",
+  tynsp: "alt/Tyn1526SP.json",
+  kjv1611: "alt/KJV1611.json",
 };
 
 const translationsx = {
