@@ -2169,6 +2169,10 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
 
     if (elements.highlightSearch.checked && elements.searchInput.value.trim() !== "") {
       const searchTerms = elements.searchInput.value.trim().split(/\s+/);
+      let hEng = pEng || "";
+      if (normalized) {
+        hEng = hEng.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|\?|\[\?\]|!/g, '');
+      }
 
       for (let term of searchTerms) {
         let exact = elements.exactMatch.checked;
@@ -2186,8 +2190,8 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
           (
             pEng &&
             (exact 
-              ? pEng.toLowerCase() === term.toLowerCase()
-              : pEng.toLowerCase().includes(term.toLowerCase())) 
+              ? hEng.toLowerCase() === term.toLowerCase()
+              : hEng.toLowerCase().includes(term.toLowerCase())) 
           ) || ( // BEGIN LXX Helper
             grk &&
             (exact 
@@ -3614,6 +3618,7 @@ function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
 }
 
 function termMatch(term, word) {
+  const normalized = elements.normalized.checked;
   let exact = elements.exactMatch.checked;
   let not = false;
   if (term.startsWith('~')) {
@@ -3624,12 +3629,17 @@ function termMatch(term, word) {
     exact = true;
     term = term.slice(1);
   }
+  if (normalized) {
+    word = word.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|\?|\[\?\]|!/g, '');
+  }
+
   let result = exact ? word === term : word.includes(term);
   return not ? !result : result
 }
 
 function multiWordSearch(searchStr, lookupInd) {
   if (debugMode) console.log("multiWordSearch()");
+  const isFirstPanel = getActivePanelId() === 0;
   const reverseInterlinear = elements.reverseInterlinear.checked;
   const ordered = elements.ordered.checked;       // new checkbox for ordered matching
   const adjacent = elements.adjacent.checked;     // new checkbox for adjacent matching
@@ -3663,7 +3673,7 @@ function multiWordSearch(searchStr, lookupInd) {
     let hadLookupHit = false;
 
     // Case: Latin, not in lookups, and not normalized → raw term search
-    if (!/[α-ω]/i.test(term) && !inLookups && !normalized) {
+    if (!/[α-ω]/i.test(term) && ((!inLookups && !normalized) || (select.value !== "none" && !isFirstPanel))) {
       const lowerTerm = typeof normTerm === "string" ? normTerm.toLowerCase() : normTerm;
       lookupTerms.push(lowerTerm);
       lookupStrength.push(-lowerTerm.length);
@@ -4666,6 +4676,7 @@ function showDisclaimer() {
 
   // Wait for user acknowledgment
   ackButton.onclick = async function() {
+    loadSettings(false, false);
     saveSettings();
     translationModal.style.display = "none";
 
