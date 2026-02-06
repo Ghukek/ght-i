@@ -1,3 +1,5 @@
+// GHT Study Tool by Nathan P. Wiebe. Javascript content. Dedicated to the Public Domain.
+
 const debugMode = true;
 const debugModeExtra = false;
 
@@ -4616,16 +4618,16 @@ const translations = {
 };
 
 const translationsx = {
-  kjv: "KJV1769x.json" ,
-  gen: "Gen1599x.json",
-  tyn: "Tyn1534x.json",
-  wyc: "Wycliffex.json",
-  web: "WEBx.json",
-  bsb: "BSBx.json",
-  msb: "MSBx.json",
-  wycsp: "WycSPx.json",
-  tynsp: "Tyn1526SP.json",
-  kjv1611: "KJV1611x.json",
+  kjv: "alt/KJV1769x.json" ,
+  gen: "alt/Gen1599x.json",
+  tyn: "alt/Tyn1534x.json",
+  wyc: "alt/Wycliffex.json",
+  web: "alt/WEBx.json",
+  bsb: "alt/BSBx.json",
+  msb: "alt/MSBx.json",
+  wycsp: "alt/WycSPx.json",
+  tynsp: "alt/Tyn1526SP.json",
+  kjv1611: "alt/KJV1611x.json",
 };
 
 const select = document.getElementById("translationSelect");
@@ -4659,7 +4661,7 @@ function showDisclaimer() {
   togglePopup("panelPopup");
   // Show modal with warning
   modalText.innerHTML = 
-    "The GHT team is not responsible for the content of other translations, and their inclusion in this tool should not be considered endorsement. Any errors, omissions, additions, or interpretations remain the responsibility of the translation source organization.<br><br>All translations provided here are Public Domain, see <a href='https://ghukek.com/jsonsource.html' target='_blank' rel='noopener noreferrer'>here</a> for a list of sources.";
+    "The GHT team is not responsible for the content of other translations, and their inclusion in this tool should not be considered endorsement. Any errors, omissions, additions, or interpretations remain the responsibility of the translation source organization.<br><br>All translations provided here are Public Domain, see <a href='jsonsource.html' target='_blank' rel='noopener noreferrer'>here</a> for a list of sources.";
   translationModal.style.display = "block";
 
   // Wait for user acknowledgment
@@ -4685,6 +4687,7 @@ select.addEventListener("change", async function() {
     togglePopup("panelPopup");
     compData = null;
     changeAltTranslation();
+    document.getElementById("swapPanelsBtn").disabled = false;
     return;
   }
 
@@ -4695,6 +4698,7 @@ select.addEventListener("change", async function() {
     // Modal already shown, just load the translation
     await loadTranslation(selected);
   }
+  document.getElementById("swapPanelsBtn").disabled = true;
 });
 
 // Extract translation loading logic for reuse

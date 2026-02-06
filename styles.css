@@ -1,3 +1,5 @@
+/* GHT Study Tool by Nathan P. Wiebe. CSS content. Dedicated to the Public Domain. */
+
 :root {
   --font-family: "Times New Roman", serif;
   --font-size: 16px;
@@ -458,6 +460,10 @@ button {
 
 button:hover {
   background-color: #ddd6c4;   /* darker on hover */
+}
+
+button:disabled {
+  background-color: var(--very-light-tan);   
 }
 
 select {
