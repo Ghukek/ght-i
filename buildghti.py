@@ -30,6 +30,9 @@ html = re.sub(
     r"<script>\s*const script[\s\S]*?</script>", "", html, flags=re.MULTILINE
 )
 
+# Swap debugMode to false
+js = re.sub("const debugMode = true;", "const debugMode = false;", js)
+
 # Remove let baseData; and let lookupdb; from JS
 js = re.sub(r"^\s*let\s+baseData\s*;\s*$", "", js, flags=re.MULTILINE)
 js = re.sub(r"^\s*let\s+lookupdb\s*;\s*$", "", js, flags=re.MULTILINE)
