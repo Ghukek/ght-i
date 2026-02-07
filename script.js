@@ -3196,7 +3196,7 @@ function collectVerseMatches(b, c, v) {
     }
   } else {
     if (currData[b]?.[c]?.[v]) {
-      results.push({ book: b, chapter: c, verse: v, verseData: baseData[b][c][v] });
+      results.push({ book: b, chapter: c, verse: v, verseData: currData[b][c][v] });
     } else {
       results.push({ book: -1, chapter: -1, verse: -1, verseData: [] });
     }
