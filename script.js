@@ -245,6 +245,7 @@ let lookupdb;
 // Main initialization function
 function loadBaseJson() {
   if (debugMode) console.log("loadBaseJson()")
+  if (debugMode) document.getElementById("alpha").style.display = "block"; // Show alpha warning if in debug mode.
   const params = new URLSearchParams(window.location.search);
   const dbName = params.get("db") === "basex" ? "basex.json" : "base.json";
   const lookupsName = params.get("db") === "basex" ? "lookupsex.json" : "lookups.json";
@@ -2171,7 +2172,7 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
       const searchTerms = elements.searchInput.value.trim().split(/\s+/);
       let hEng = pEng || "";
       if (normalized) {
-        hEng = hEng.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|\?|\[\?\]|!/g, '');
+        hEng = hEng.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|—|\?|\[\?\]|!/g, '');
       }
 
       for (let term of searchTerms) {
@@ -2226,7 +2227,9 @@ function renderSingleVerse(container, book, chapter, verse, verseData, options, 
     }
 
     function appendEng(wordEl, pEng, rEng) {
-      const engV = (select.value === "none" || isFirstPanel) ? "eng" : "compEng";
+      let engV = (select.value === "none" || isFirstPanel) ? "eng" : "compEng";
+      if (engV === "compEng" && pEng.startsWith("—") && (i > 0 || !showVerses)) engV = "compEngL"; 
+      if (engV === "compEng" && pEng.endsWith("—") && (i < verseWords.length - 1  || !showVerses)) engV = "compEngR"; 
       if (!elements.normalized.checked || pEng === rEng) {
         if (elements.customFormat.checked) {
           wordEl.appendChild(createClickableSpan(engV, processFormatting(pEng), wordEl, pEng));
@@ -3264,7 +3267,7 @@ function searchVerses() {
   }
 
   if (normalized) {
-    searchTerm = searchTerm.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|\?|\[\?\]|!/g, '');
+    searchTerm = searchTerm.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|—|\?|\[\?\]|!/g, '');
     elements.searchInput.value = searchTerm
   }
 
@@ -3454,7 +3457,7 @@ function handleWordMatches(term, matches) {
     verseData.forEach(([ident, eng]) => {
       let word = (eng || "").toLowerCase();
       if (normalized) {
-        word = word.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|\?|\[\?\]|!/g, '');
+        word = word.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|—|\?|\[\?\]|!/g, '');
       }
       let isMatch = exact ? word === searchTerm : word.includes(searchTerm);
       if (not) isMatch = !isMatch;
@@ -3630,7 +3633,7 @@ function termMatch(term, word) {
     term = term.slice(1);
   }
   if (normalized) {
-    word = word.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|\?|\[\?\]|!/g, '');
+    word = word.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|—|\?|\[\?\]|!/g, '');
   }
 
   let result = exact ? word === term : word.includes(term);
@@ -4301,6 +4304,7 @@ const slider = document.getElementById('paddingSlider');
 function updatePadding(val) {
   if (debugMode) console.log("updatePadding()");
   document.documentElement.style.setProperty('--word-padding', val + 'em');
+  document.documentElement.style.setProperty('--word-padding-neg', Math.max(-2 * val, -0.3) + 'em');
 }
 
 slider.addEventListener('input', e => {
@@ -4401,13 +4405,17 @@ function attachResize(divider) {
       let newLeft = startSizes.left + pos - startPos;
       newLeft = Math.max(80, Math.min(newLeft, total - 80));
       const newRight = total - newLeft;
-      outputContainer.style.gridTemplateColumns = `${newLeft}px 6px ${newRight}px`;
+      const newLeftPercent = (newLeft / (total + 6)) * 100;
+      //outputContainer.style.gridTemplateColumns = `${newLeft}px 6px ${newRight}px`;
+      outputContainer.style.gridTemplateColumns = `${newLeftPercent}% 6px 1fr`;
     } else {
       const total = startSizes.top + startSizes.bottom;
       let newTop = startSizes.top + pos - startPos;
       newTop = Math.max(80, Math.min(newTop, total - 80));
       const newBottom = total - newTop;
-      outputContainer.style.gridTemplateRows = `${newTop}px 6px ${newBottom}px`;
+      const newTopPercent = (newTop / (total + 6)) * 100;
+      //outputContainer.style.gridTemplateRows = `${newTop}px 6px ${newBottom}px`;
+      outputContainer.style.gridTemplateRows = `${newTopPercent}% 6px 1fr`;
     }
   }
 
