@@ -495,6 +495,7 @@ function loadState(panelID, index) {
   historyIndexes[panelID] = index;
 
   // Trigger appropriate re-run
+  updateDisplay();
   if (currentRender === "search") searchVerses();
   else render();
   if (originalPanel && targetPanel !== originalPanel) {
@@ -542,6 +543,14 @@ function swapPanelsHistory(a = 0, b = 1) {
   // swap history indexes
   [historyIndexes[a], historyIndexes[b]] =
     [historyIndexes[b], historyIndexes[a]];
+
+  // Swap panel settings
+  const settings = loadAllSettings();
+
+  [settings.panels[0], settings.panels[1]] =
+    [settings.panels[1], settings.panels[0]];
+
+  saveAllSettings(settings);
 
   // Update history buttons for both panels
   updateHistoryButtons(a);
