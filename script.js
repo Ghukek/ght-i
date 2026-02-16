@@ -774,7 +774,7 @@ function setupEventListeners() {
   ].forEach(id => {
     const el = elements[id];
     const event = id === "searchBtn" ? "click" : "change";
-    el.addEventListener(event, searchVerses);
+    el.addEventListener(event, searchChange);
   });
 
   elements.searchInput.addEventListener('keydown', function(e) {
@@ -3202,7 +3202,7 @@ function lookInLookups(term) {
 }
 
 function collectVerseMatches(b, c, v) {
-  if (debugMode) console.log("collectVerseMatches()");
+  if (debugModeExtra) console.log("collectVerseMatches()");
   let verseRange = parseInt(elements.gapInput.value, 10) || 1;
   const centerRange = elements.centerRange.checked;
   const results = [];
@@ -3273,12 +3273,23 @@ function forEachVerse(callback) {
 
 let searchState = {
   term: null,         // current search term
-  exactMatch: null,
   contextCount: 0,     // Current gapInput
   page: 0,            // current page index
   pageSize: 10,      // max results per page
   boundaries: [0]      // array of indexes where each page starts (0, x, y, …)
 };
+
+function searchChange() {
+  if (debugMode) console.log("searchChange()");
+  searchState = {
+    term: searchState.term,
+    contextCount: parseInt(elements.gapInput.value),
+    page: 0,
+    pageSize: parseInt(elements.searchSize.value),
+    boundaries: [0]
+  };
+  searchVerses();
+}
 
 function refSearch(searchTerm) {
   if (debugMode) console.log("refSearch()");
@@ -3301,7 +3312,6 @@ function searchVerses() {
   const showContext = elements.showContext.checked;
   const uniqueWords = elements.uniqueWords.checked;
   const normalized = elements.normalized.checked;
-  const exactMatch = elements.exactMatch.checked;
   const container = document.getElementById('output');
   container.innerHTML = ''; // clear existing output
 
@@ -3320,10 +3330,9 @@ function searchVerses() {
   saveSettings('save-id');
 
   // Reset state if new term or new search size, or new context size.
-  if (searchTerm !== searchState.term || parseInt(elements.searchSize.value) !== searchState.pageSize || parseInt(elements.gapInput.value) !== searchState.contextCount || exactMatch !== searchState.exactMatch) {
+  if (searchTerm !== searchState.term || parseInt(elements.searchSize.value) !== searchState.pageSize || parseInt(elements.gapInput.value) !== searchState.contextCount) {
     searchState = {
       term: searchTerm,
-      exactMatch: exactMatch,
       contextCount: parseInt(elements.gapInput.value),
       page: 0,
       pageSize: parseInt(elements.searchSize.value),
@@ -3550,7 +3559,7 @@ function prevPage() {
 }
 
 function checkWordSequence(allWords, latinWords, isGreek, matchIdent = false) {
-  if (debugMode) console.log("checkWordSequence()");
+  if (debugModeExtra) console.log("checkWordSequence()");
   const normalized = elements.normalized.checked;
   const ordered = elements.ordered.checked;       // new checkbox for ordered matching
   const adjacent = elements.adjacent.checked;     // new checkbox for adjacent matching
