@@ -415,6 +415,13 @@ function saveState(empty = false) {
   const stack = historyStacks[panelID] ??= [];
   let index = historyIndexes[panelID] ??= -1;
 
+  let override = false;
+  if (panelID !== 0 && elements.linkPanels.checked && stack[index]) { // When link panels is active, only update history stack on second panel if search.
+    if (stack[index]['currentRender'] !== "search") { // Nested if-statement needed due to the initial load of 3rd panel having no valid [index]['currentRender'] value, but that will never be a search since a translation load is always reference-call. If this were in the first if-statement, it would cause an error on alternate translation load.
+      override = true;
+    }
+  }
+
   const state = {};
   Object.keys(elements).forEach(id => {
     const el = elements[id];
@@ -438,7 +445,7 @@ function saveState(empty = false) {
     stack.splice(index + 1);
   }
 
-  if (!lastEmpty[panelID]) {
+  if (!lastEmpty[panelID] && !override) {
     // Push new state
     stack.push(state);
     index++;
@@ -473,7 +480,7 @@ function getSizeBytes(obj) {
 function loadState(panelID, increment) {
   if (debugMode) console.log("loadState()")
   const stackID = panelID === 1 && select.value !== "none" ? 2 : panelID;
-  const index = historyIndexes[stackID] + increment;
+  let index = historyIndexes[stackID] + increment;
   const stack = historyStacks[stackID];
   if (!stack) return;
   if (index < 0 || index >= stack.length) return;
@@ -489,7 +496,20 @@ function loadState(panelID, increment) {
   if (targetPanel !== originalPanel) {
     activate(targetPanel);
   }
-  const state = stack[index];
+  let state = stack[index];
+
+  if (panelID !== 0 && elements.linkPanels.checked && state) { // When link panels is active, do not load any reference histories.
+    while (state['currentRender'] === "reference" && index > 0 && increment !== 0 && index < stack.length - 1) {
+      index += increment;
+      state = stack[index];
+    }
+    if ((index === 0 || increment === 0 || index === stack.length - 1) && state['currentRender'] === "reference") {
+      if (increment !== 0) showToast("No more search histories to load in this direction.\n Use left navigation buttons to navigate reference histories when panels are linked.", 3000);
+      restoring = false;
+      historyIndexes[stackID] = index;
+      return;
+    }
+  }
 
   Object.keys(state).forEach(id => {
     const el = elements[id];
