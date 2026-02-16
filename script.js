@@ -4711,6 +4711,20 @@ const translationsx = {
   kjv1611: "alt/KJV1611x.json",
 };
 
+// Mapping of translation values to their abbreviations
+const translationAbbrevs = {
+  "bsb": "BSB",
+  "msb": "MSB", 
+  "web": "WEB",
+  "kjv": "KJV (1769)",
+  "kjv1611": "KJV (1611)",
+  "gen": "Geneva",
+  "tyn": "Tyndale",
+  "tynsp": "TYN (sp)",
+  "wyc": "Wycliffe",
+  "wycsp": "Wycliffe (sp)"
+};
+
 const select = document.getElementById("translationSelect");
 const translationModal = document.getElementById("translationModal");
 const modalText = document.getElementById("modalText");
@@ -4757,7 +4771,9 @@ function showDisclaimer() {
 
     // Mark modal as shown for this session
     modalShown = true;
-
+    //document.getElementById("swapPanelsBtn").disabled = true;
+    const abbrevElement = document.getElementById("translationAbbrev");
+    abbrevElement.style.display = "block";
     await loadTranslation(select.value);
   };
 
@@ -4769,21 +4785,9 @@ function showDisclaimer() {
 
 select.addEventListener("change", async function() {
   const selected = select.value;
-  // Mapping of translation values to their abbreviations
-  const translationAbbrevs = {
-    "bsb": "BSB",
-    "msb": "MSB", 
-    "web": "WEB",
-    "kjv": "KJV (1769)",
-    "kjv1611": "KJV (1611)",
-    "gen": "Geneva",
-    "tyn": "Tyndale",
-    "tynsp": "TYN (sp)",
-    "wyc": "Wycliffe",
-    "wycsp": "Wycliffe (sp)"
-  };
   
   const abbrevElement = document.getElementById("translationAbbrev");
+  abbrevElement.textContent = translationAbbrevs[selected] || selected.toUpperCase();
 
   if(selected === "none") {
     togglePopup("panelPopup");
@@ -4793,17 +4797,16 @@ select.addEventListener("change", async function() {
     abbrevElement.style.display = "none";
     return;
   }
-  abbrevElement.textContent = translationAbbrevs[selected] || selected.toUpperCase();
-  abbrevElement.style.display = "block";
 
   if(!modalShown) {
     showDisclaimer();
   } else {
     togglePopup("panelPopup");
     // Modal already shown, just load the translation
+    //document.getElementById("swapPanelsBtn").disabled = true;
+    abbrevElement.style.display = "block";
     await loadTranslation(selected);
   }
-  //document.getElementById("swapPanelsBtn").disabled = true;
 });
 
 // Extract translation loading logic for reuse
