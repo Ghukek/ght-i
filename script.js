@@ -4739,13 +4739,13 @@ select.addEventListener("change", async function() {
     "bsb": "BSB",
     "msb": "MSB", 
     "web": "WEB",
-    "kjv": "KJV",
-    "kjv1611": "KJV1611",
-    "gen": "GEN",
-    "tyn": "TYN",
-    "tynsp": "TYNSP",
-    "wyc": "WYC",
-    "wycsp": "WYCSP"
+    "kjv": "KJV (1769)",
+    "kjv1611": "KJV (1611)",
+    "gen": "Geneva",
+    "tyn": "Tyndale",
+    "tynsp": "TYN (sp)",
+    "wyc": "Wycliffe",
+    "wycsp": "Wycliffe (sp)"
   };
   
   const abbrevElement = document.getElementById("translationAbbrev");
