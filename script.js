@@ -2015,9 +2015,61 @@ function render(customVerses = null, inDouble = false) {
     container.scrollTop = (container.scrollHeight - container.clientHeight) / 2;
     centerFromSearch = false;
   }
+
+  requestAnimationFrame(() => fixOverwideEng(container));
+  
   if (debugMode) console.log("end render()");
   return;
 }
+
+function fixOverwideEng(container) {
+  const containerWidth = container.clientWidth;
+  const engSpans = container.querySelectorAll(".eng");
+
+  for (const eng of engSpans) {
+
+    // reset previous manual breaks
+    if (eng.dataset.fixed) {
+      eng.textContent = eng.textContent;
+      delete eng.dataset.fixed;
+    }
+
+    if (eng.scrollWidth <= containerWidth) continue;
+
+    const text = eng.textContent;
+    const parts = text.split(/(?<=\/)/); // keep slashes
+    if (parts.length === 1) continue;
+
+    const measurer = document.createElement("span");
+    measurer.style.visibility = "hidden";
+    measurer.style.whiteSpace = "nowrap";
+    measurer.style.position = "absolute";
+    measurer.style.font = getComputedStyle(eng).font;
+    document.body.appendChild(measurer);
+
+    let lines = [];
+    let current = "";
+
+    for (const part of parts) {
+      measurer.textContent = current + part;
+
+      if (measurer.offsetWidth > containerWidth && current) {
+        lines.push(current);
+        current = part;
+      } else {
+        current += part;
+      }
+    }
+
+    if (current) lines.push(current);
+
+    measurer.remove();
+
+    eng.innerHTML = lines.join("<br>");
+    eng.dataset.fixed = "1";
+  }
+}
+
 
 let otherPanel = false;
 
@@ -4480,6 +4532,15 @@ function attachResize(divider) {
       //outputContainer.style.gridTemplateRows = `${newTop}px 6px ${newBottom}px`;
       outputContainer.style.gridTemplateRows = `${newTopPercent}% 6px 1fr`;
     }
+    let raf;
+    function scheduleFix() {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        outputContainer.querySelectorAll(".panel")
+          .forEach(fixOverwideEng);
+      });
+    }
+    scheduleFix();
   }
 
   function onMouseMove(e) {
