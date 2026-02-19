@@ -144,15 +144,8 @@ body {
 }
 
 #translationAbbrev {
-  position: fixed;
-  top: 2.5rem;
-  right: 1rem;
-  font-size: 0.9rem;
   font-weight: bold;
-  background-color: var(--even-darker-tan);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  z-index: 999;
+  background-color: var(--dark-tan);
 }
 
 .grk { 

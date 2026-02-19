@@ -4500,9 +4500,11 @@ function storePanelState(panelID) {
 
 function loadPanelState(panelID) {
   if (debugMode) console.log("loadPanelState()");
-  //console.log(historyStacks[panelID][historyIndexes[panelID]])
-  const state = historyStacks[panelID][historyIndexes[panelID]];
-  //const state = panelState[panelID];
+  const stack = historyStacks[panelID];
+  if (!stack) return;
+  const index = historyIndexes[panelID];
+  if (index == null) return;
+  const state = stack[index];
   if (!state) return;
 
   elements.bookStart.value = state.bookStart;
