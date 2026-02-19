@@ -1674,7 +1674,7 @@ function getDisplayOptions() {
 function insertFwdBack(container) {
   if (debugMode) console.log("insertFwdBack()");
   const backBtn = document.createElement("button");
-  if (searchState.page === 0) {
+  if (searchState[currentPanelId].page === 0) {
     backBtn.id = "greyFwdBackBtn";
   } else {
     backBtn.id = "pageBackBtn";
@@ -1684,7 +1684,7 @@ function insertFwdBack(container) {
   backBtn.onclick = prevPage;
 
   const forwardBtn = document.createElement("button");
-  if (searchState.page + 1 >= searchState.boundaries.length) {
+  if (searchState[currentPanelId].page + 1 >= searchState[currentPanelId].boundaries.length) {
     forwardBtn.id = "greyFwdBackBtn";
   } else {
     forwardBtn.id = "pageForwardBtn";
@@ -1713,9 +1713,9 @@ function render(customVerses = null, inDouble = false) {
   if (elements.linkPanels.checked && (elements.horizPanel.checked || elements.vertPanel.checked) && currentRender === "reference" && !inDouble) { 
     let activePanel = getActivePanelId();
     let inactivePanel = activePanel === 1 ? 0 : 1;
-    activate(outputContainer.querySelector(`[data-panel-i-d="${inactivePanel}"]`), true);
+    activate(outputContainer.querySelector(`[data-panel-i-d="${inactivePanel}"]`), elements.gapInput.value);
     render(customVerses, true);
-    activate(outputContainer.querySelector(`[data-panel-i-d="${activePanel}"]`), true);
+    activate(outputContainer.querySelector(`[data-panel-i-d="${activePanel}"]`), elements.gapInput.value);
     render(customVerses, true);
     if (debugMode) console.log("end render()");
     return
@@ -1740,7 +1740,7 @@ function render(customVerses = null, inDouble = false) {
 
   // Check for custom input (either word list or verse list)
   if (customVerses && Array.isArray(customVerses)) {
-    if (searchState.boundaries.length > 1) {
+    if (searchState[currentPanelId].boundaries.length > 1) {
       insertFwdBack(container)
     }
 
@@ -1915,7 +1915,7 @@ function render(customVerses = null, inDouble = false) {
       });
 
       container.appendChild(wrapper);
-      if (searchState.boundaries.length > 1) {
+      if (searchState[currentPanelId].boundaries.length > 1) {
         insertFwdBack(container)
       }
       if (debugMode) console.log("end render()");
@@ -1942,7 +1942,7 @@ function render(customVerses = null, inDouble = false) {
         isFirstPanel
       ));
     });
-    if (searchState.boundaries.length > 1) {
+    if (searchState[currentPanelId].boundaries.length > 1) {
       insertFwdBack(container)
     }
     if (debugMode) console.log("end render()");
@@ -3323,18 +3323,27 @@ function forEachVerse(callback) {
   }
 }
 
-let searchState = {
-  term: null,         // current search term
-  contextCount: 0,     // Current gapInput
-  page: 0,            // current page index
-  pageSize: 10,      // max results per page
-  boundaries: [0]      // array of indexes where each page starts (0, x, y, …)
-};
+function newSearchState() {
+  return {
+    term: null,         // current search term
+    contextCount: 0,     // Current gapInput
+    page: 0,            // current page index
+    pageSize: 10,      // max results per page
+    boundaries: [0]      // array of indexes where each page starts (0, x, y, …)
+  };
+}
+
+let searchState = [
+  newSearchState(),
+  newSearchState(),
+  newSearchState()
+]; // separate state for each panel (0, 1, 2)
 
 function searchChange() {
   if (debugMode) console.log("searchChange()");
-  searchState = {
-    term: searchState.term,
+  currentPanelId = (getActivePanelId() === 1 && select.value !== "none") ? 2 : getActivePanelId();
+  searchState[currentPanelId] = {
+    term: searchState[currentPanelId].term,
     contextCount: parseInt(elements.gapInput.value),
     page: 0,
     pageSize: parseInt(elements.searchSize.value),
@@ -3359,7 +3368,7 @@ function refSearch(searchTerm) {
 
 function searchVerses() {
   if (debugMode) console.log("searchVerses()");
-  const altVersion = (select.value === "none" || getActivePanelId() === 0) ? false : true;
+  const altVersion = (currentPanelId === 2) ? true : false;
   let searchTerm = elements.searchInput.value.trim();
   const showContext = elements.showContext.checked;
   const uniqueWords = elements.uniqueWords.checked;
@@ -3382,8 +3391,8 @@ function searchVerses() {
   saveSettings('save-id');
 
   // Reset state if new term or new search size, or new context size.
-  if (searchTerm !== searchState.term || parseInt(elements.searchSize.value) !== searchState.pageSize || parseInt(elements.gapInput.value) !== searchState.contextCount) {
-    searchState = {
+  if (searchTerm !== searchState[currentPanelId].term || parseInt(elements.searchSize.value) !== searchState[currentPanelId].pageSize || parseInt(elements.gapInput.value) !== searchState[currentPanelId].contextCount) {
+    searchState[currentPanelId] = {
       term: searchTerm,
       contextCount: parseInt(elements.gapInput.value),
       page: 0,
@@ -3469,7 +3478,7 @@ function handleLookupMatches(searchTerm, matches) {
   const uniqueWords = elements.uniqueWords.checked;
 
   // figure out paging bounds
-  const startIndex = searchState.boundaries[searchState.page];
+  const startIndex = searchState[currentPanelId].boundaries[searchState[currentPanelId].page];
   const endIndex = startIndex + parseInt(elements.searchSize.value);
 
   let count = 0; // how many matches total so far
@@ -3497,8 +3506,8 @@ function handleLookupMatches(searchTerm, matches) {
   // if we're in uniqueWords mode we’re done
   if (uniqueWords) {
     // add boundary marker if we have more than one page
-    if (searchState.boundaries.length <= searchState.page + 1 && count > endIndex) {
-      searchState.boundaries.push(endIndex);
+    if (searchState[currentPanelId].boundaries.length <= searchState[currentPanelId].page + 1 && count > endIndex) {
+      searchState[currentPanelId].boundaries.push(endIndex);
     } 
     // At some point I need to add sorting for unique words. In order to do that, I need to move the pagination down here.
     return;
@@ -3534,8 +3543,8 @@ function handleLookupMatches(searchTerm, matches) {
   });
 
   // add boundary marker if needed
-  if (searchState.boundaries.length <= searchState.page + 1 && count > endIndex) {
-    searchState.boundaries.push(endIndex);
+  if (searchState[currentPanelId].boundaries.length <= searchState[currentPanelId].page + 1 && count > endIndex) {
+    searchState[currentPanelId].boundaries.push(endIndex);
   }
 }
 
@@ -3557,7 +3566,7 @@ function handleWordMatches(term, matches) {
   }
   let searchTerm = term.toLowerCase();
 
-  const startIndex = searchState.boundaries[searchState.page];
+  const startIndex = searchState[currentPanelId].boundaries[searchState[currentPanelId].page];
   const endIndex = startIndex + parseInt(elements.searchSize.value, 10);
 
   let count = 0;
@@ -3582,30 +3591,30 @@ function handleWordMatches(term, matches) {
             count++;
           }
         }
-        //count++;
+        count++;
       }
     });
   });
 
   // update boundaries if we need a new page marker
-  if (searchState.boundaries.length <= searchState.page + 1 && count > endIndex) {
-    searchState.boundaries.push(endIndex);
+  if (searchState[currentPanelId].boundaries.length <= searchState[currentPanelId].page + 1 && count > endIndex) {
+    searchState[currentPanelId].boundaries.push(endIndex);
   }
 
 }
 
 function nextPage() {
   if (debugMode) console.log("nextPage()");
-  if (searchState.page + 1 < searchState.boundaries.length) {
-    searchState.page++;
+  if (searchState[currentPanelId].page + 1 < searchState[currentPanelId].boundaries.length) {
+    searchState[currentPanelId].page++;
     searchVerses();
   }
 }
 
 function prevPage() {
   if (debugMode) console.log("nextPage()");
-  if (searchState.page > 0) {
-    searchState.page--;
+  if (searchState[currentPanelId].page > 0) {
+    searchState[currentPanelId].page--;
     searchVerses();
   }
 }
@@ -3765,7 +3774,7 @@ function multiWordSearch(searchStr, lookupInd) {
   const terms = searchStr.trim().split(/\s+/);
 
   // figure out paging bounds
-  const startIndex = searchState.boundaries[searchState.page];
+  const startIndex = searchState[currentPanelId].boundaries[searchState[currentPanelId].page];
   const pageSize = parseInt(elements.searchSize.value, 10) || 0;
   const gap      = parseInt(elements.gapInput.value, 10) || 1;
 
@@ -3929,8 +3938,8 @@ function multiWordSearch(searchStr, lookupInd) {
   });
 
   // add boundary marker if needed
-  if (searchState.boundaries.length <= searchState.page + 1 && count > endIndex) {
-    searchState.boundaries.push(endIndex);
+  if (searchState[currentPanelId].boundaries.length <= searchState[currentPanelId].page + 1 && count > endIndex) {
+    searchState[currentPanelId].boundaries.push(endIndex);
   }
 
   return results;
@@ -4676,6 +4685,9 @@ function buildPanels(count) {
   activate(outputContainer.firstElementChild);
 }
 
+let currentPanelId = getActivePanelId();
+currentPanelId = (currentPanelId === 1 && select.value !== "none") ? 2 : currentPanelId;
+
 function activate(panel, fromRender = false) {
   if (debugMode) console.log("activate()");
   const current = document.getElementById("output");
@@ -4683,8 +4695,12 @@ function activate(panel, fromRender = false) {
 
   panel.id = "output";
 
+  currentPanelId = getActivePanelId();
+  currentPanelId = (currentPanelId === 1 && select.value !== "none") ? 2 : currentPanelId;
+
   loadSettings(false, false);
-  if (!fromRender) loadPanelState(panel.dataset.panelID);
+  if (!fromRender) loadPanelState(currentPanelId);
+  else elements.gapInput.value = fromRender; // gapInput is saved in settings and thus overridden when render() activates panels for linking purposes.
 }
 
 function setMode(changed = null) {
@@ -4876,7 +4892,7 @@ async function loadTranslation(selected) {
   const params = new URLSearchParams(window.location.search);
   const path = params.get("db") === "basex" ? translationsx[selected] : translations[selected];
 
-  searchState = {
+  searchState[currentPanelId] = {
     term: null,         
     exactMatch: null,
     contextCount: 0,    
