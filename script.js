@@ -4762,7 +4762,7 @@ window.addEventListener("resize", updatePanelHeight);
 window.addEventListener("orientationchange", updatePanelHeight);
 document.addEventListener("DOMContentLoaded", updatePanelHeight);
 
-// Parallel mode
+// Alternate Translation mode
 
 const translations = {
   kjv: "alt/KJV1769.json" ,
@@ -4814,7 +4814,7 @@ let modalShown = false;
 function changeAltTranslation() {
   if (debugMode) console.log("changeAltTranslation()");
   let data = loadAllSettings();
-  if (!data.panels[2] || !historyStacks[2]) {
+  if ((!data.panels[2] || !historyStacks[2]) && select.value !== "none") {
     let activePanel = getActivePanelId();
     if (activePanel === 0) { 
       activate(outputContainer.querySelector(`[data-panel-i-d="1"]`));
@@ -4903,13 +4903,68 @@ async function loadTranslation(selected) {
     boundaries: [0]     
   };
 
-  try {
-    const response = await fetch(path);
-    compData = await response.json();
-    console.log(`Loaded ${selected} translation into compData.`);
-  } catch(err) {
-    console.error("Error loading translation JSON:", err);
-    compData = null;
+  const cacheKey = `translation_${selected}${params.get("db")==="basex" ? "_x" : ""}`;
+  const versionKey = `${cacheKey}_version`;
+
+  let cached = await idbGet(cacheKey);
+  let localVersion = await idbGet(versionKey);
+  let serverVersion = null;
+
+  // --- try getting server version (only if online) ---
+  if (navigator.onLine) {
+    try {
+      const vRes = await fetch("alt/datadates.json", { cache: "no-store" });
+      if (vRes.ok) {
+        const versions = await vRes.json();
+        serverVersion = versions[selected] ?? null;
+        console.log(`${selected} server version:`, serverVersion);
+      }
+    } catch {
+      console.log(`${selected} version check failed — assuming offline or blocked.`);
+    }
+  }
+
+  // --- CASE 1: offline or version unknown ---
+  if (!serverVersion) {
+    if (cached) {
+      compData = cached;
+      console.log(`Loaded ${selected} from cache (offline or no manifest)`);
+    } else {
+      console.warn(`No cached ${selected} available and cannot check version (offline or no manifest)`);
+      showToast("Failed to load translation. Falling back to GHT.");
+      select.value = "none";
+      document.getElementById("translationAbbrev").style.display = "none";
+      changeAltTranslation();
+      return;
+    }
+  } else if (cached && localVersion === serverVersion) { // --- CASE 2: cached + up to date ---
+    compData = cached;
+    console.log(`Loaded ${selected} from cache (version ${localVersion})`);
+
+  } else {
+    try { // --- CASE 3: fetch from server ---
+      const response = await fetch(path);
+      compData = await response.json();
+
+      console.log(`Fetched ${selected} from server`);
+
+      await idbSet(cacheKey, compData);
+      if (serverVersion)
+        await idbSet(versionKey, serverVersion);
+
+      console.log(`Cached ${selected} locally (version ${serverVersion ?? "unknown"})`);
+
+    } catch (err) {
+      console.warn(`Fetch failed for ${selected}`);
+
+      if (cached) {
+        compData = cached;
+        console.log(`Fallback to cached ${selected}`);
+      } else {
+        console.error(`No cached ${selected} available`);
+        compData = null;
+      }
+    }
   }
   
   if (!elements.horizPanel.checked && !elements.vertPanel.checked) {
@@ -4920,6 +4975,37 @@ async function loadTranslation(selected) {
   changeAltTranslation();
 }
 
+// Indexed DB helpers
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("TranslationDB", 1);
+
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore("translations");
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSet(key, value) {
+  const db = await openDB();
+  const tx = db.transaction("translations", "readwrite");
+  tx.objectStore("translations").put(value, key);
+  return tx.complete;
+}
+
+async function idbGet(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("translations", "readonly");
+    const req = tx.objectStore("translations").get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
 
 // Load initial data from server.
 loadBaseJson();
