@@ -477,7 +477,7 @@ function getSizeBytes(obj) {
 // Example
 // console.log("historyStack size (bytes):", getSizeBytes(historyStack));
 
-function loadState(panelID, increment) {
+function loadState(panelID, increment, fromChangeTranslation = false) {
   if (debugMode) console.log("loadState()")
   const stackID = panelID === 1 && select.value !== "none" ? 2 : panelID;
   let index = historyIndexes[stackID] + increment;
@@ -503,7 +503,7 @@ function loadState(panelID, increment) {
       index += increment;
       state = stack[index];
     }
-    if ((index === 0 || increment === 0 || index === stack.length - 1) && state['currentRender'] === "reference") {
+    if ((index === 0 || increment === 0 || index === stack.length - 1) && state['currentRender'] === "reference" && !fromChangeTranslation) {
       if (increment !== 0) showToast("No more search histories to load in this direction.\n Use left navigation buttons to navigate reference histories when panels are linked.", 3000);
       restoring = false;
       historyIndexes[stackID] = index;
@@ -4831,7 +4831,7 @@ function changeAltTranslation() {
       activate(outputContainer.querySelector(`[data-panel-i-d="0"]`));
     }
   } else {
-    loadState(1, 0);
+    loadState(1, 0, true);
   }
 }
 

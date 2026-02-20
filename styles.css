@@ -84,7 +84,6 @@ body {
 }
 
 #headerTitle {
-  cursor: pointer;
   border-radius: 5px;
 }
 
@@ -746,7 +745,6 @@ select {
   flex-grow:1;
   flex-basis:0;
   overflow: auto;
-  cursor: pointer;
   height: var(--panel-height) - 4px;
   /* from #output */
   display: flex;
