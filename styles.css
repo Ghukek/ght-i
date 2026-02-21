@@ -431,6 +431,10 @@ select {
   hyphens: none !important;
 }
 
+.col.count {
+  text-align: center;
+}
+
 input[type="checkbox"] {
   cursor: pointer;
   background-color: var(--lightest-tan)

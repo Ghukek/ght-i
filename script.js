@@ -1767,6 +1767,7 @@ function render(customVerses = null, inDouble = false) {
       if (showPcode)   headerHTML += `<span class="col reference">Morph</span>`;
       if (showStrongs) headerHTML += `<span class="col reference">Strong's</span>`;
       if (showRoots)   headerHTML += `<span class="col reference">Roots</span>`;
+      if (uniqueWords) headerHTML += `<span class="col reference">Count</span>`;
 
       header.innerHTML = headerHTML;
       wrapper.appendChild(header);
@@ -1828,7 +1829,7 @@ function render(customVerses = null, inDouble = false) {
           [grk, pcode, strongs, roots, cEng, count] = lookupData;
         }
 
-        if (ref !== "") {
+        if (ref !== "" && !uniqueWords) {
           // Reference column (no popup)
           const refEl = document.createElement("span");
           refEl.className = "col ref";
@@ -1843,6 +1844,8 @@ function render(customVerses = null, inDouble = false) {
           });
 
           row.appendChild(refEl);
+        } else if (ref !== "" && uniqueWords) {
+          count = ref;
         }
 
         // Helper for popup-enabled columns
@@ -1915,6 +1918,7 @@ function render(customVerses = null, inDouble = false) {
 
           row.appendChild(makePopupCell("roots", rootSpans, true));
         }
+        if (uniqueWords) row.appendChild(makePopupCell("count", count ? count.toString() : ""));
 
         wrapper.appendChild(row);
       });
@@ -3554,7 +3558,7 @@ function handleLookupMatches(searchTerm, matches) {
 }
 
 function handleWordMatches(term, matches) {
-  if (debugMode) console.log("setReferenceRange()");
+  if (debugMode) console.log("handleWordMatches()");
   let exact = elements.exactMatch.checked;
   let not = false;
   const normalized = elements.normalized.checked;
@@ -3575,6 +3579,7 @@ function handleWordMatches(term, matches) {
   const endIndex = startIndex + parseInt(elements.searchSize.value, 10);
 
   let count = 0;
+  const uniqueFound = new Map();
 
   forEachVerse((b, c, v, verseData) => {
     verseData.forEach(([ident, eng]) => {
@@ -3583,23 +3588,51 @@ function handleWordMatches(term, matches) {
         word = word.replace(/,|\.|\(|\)|:|"|’|‘|`|”|“|'|;|–|—|\?|\[\?\]|!/g, '');
       }
       let isMatch = exact ? word === searchTerm : word.includes(searchTerm);
-      if (not) isMatch = !isMatch;
+      if (!isMatch) return;
 
-      if (isMatch) {
-        if (count >= startIndex && count < endIndex) {
-          if (!uniqueWords) {
-            matches.push([ident, eng, `${bookAbb[b]} ${c + 1}:${v + 1}`]);
-            count++;
-          } else if (!found.includes(word)) {
-            matches.push([ident, word, ""]);
-            found.push(word);
-            count++;
-          }
+      // ---------- UNIQUE WORD MODE ----------
+      if (uniqueWords) {
+
+        if (!uniqueFound.has(word)) {
+          uniqueFound.set(word, {
+            ident,
+            word,
+            count: 1
+          });
+        } else {
+          uniqueFound.get(word).count++;
         }
-        count++;
+
+        return;
       }
+
+      // ---------- NORMAL MODE ----------
+      if (count >= startIndex && count < endIndex) {
+        matches.push([ident, eng, `${bookAbb[b]} ${c + 1}:${v + 1}`]);
+      }
+
+      count++;
     });
   });
+
+  if (uniqueWords) {
+
+    // convert map → array
+    let all = [...uniqueFound.values()];
+
+    // sort by frequency desc
+    all.sort((a, b) => b.count - a.count);
+
+    // pagination AFTER sort
+    const pageSlice = all.slice(startIndex, endIndex);
+
+    // push to matches in expected format
+    pageSlice.forEach(obj => {
+      matches.push([obj.ident, obj.word, obj.count]);
+    });
+
+    count = all.length;
+  }
 
   // update boundaries if we need a new page marker
   if (searchState[currentPanelId].boundaries.length <= searchState[currentPanelId].page + 1 && count > endIndex) {
