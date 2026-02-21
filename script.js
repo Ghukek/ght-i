@@ -708,12 +708,7 @@ function setupEventListeners() {
   if (debugMode) console.log("setupEventListeners()");
   // Helper for start/end selectors
   const rangeSelectors = [
-    {
-      book: "bookStart",
-      chapter: "chapterStart",
-      verse: "verseStart",
-      type: "start",
-    },
+    { book: "bookStart", chapter: "chapterStart", verse: "verseStart", type: "start" },
     { book: "bookEnd", chapter: "chapterEnd", verse: "verseEnd", type: "end" },
   ];
 
@@ -766,61 +761,43 @@ function setupEventListeners() {
 
   // For checkboxes that trigger onOptionsChange
   [
-    "showGreek",
-    "showEnglish",
-    "showPcode",
-    "showVerses",
-    "showStrongs",
-    "showRoots",
-    "newlineAfterVerse",
-    "reverseInterlinear",
-    "highlightSearch",
-    "searchSize",
-    "customFormat",
-    "altSearch",
-    "uncialGreek",
-  ].forEach((id) => {
+    "showGreek", "showEnglish", "showPcode", "showVerses",
+    "showStrongs", "showRoots", "newlineAfterVerse", "reverseInterlinear", "highlightSearch", "searchSize", "customFormat", "altSearch", "uncialGreek"
+  ].forEach(id => {
     elements[id].addEventListener("change", onOptionsChange);
   });
 
   // For checkboxes or inputs that trigger searchVerses
   [
-    "searchBtn",
-    "centerRange",
-    "showContext",
-    "exactMatch",
-    "uniqueWords",
-    "ordered",
-    "adjacent",
-    "normalized",
-    "expandMorph",
-  ].forEach((id) => {
+    "searchBtn", "centerRange", "showContext", "exactMatch",
+    "uniqueWords", "ordered", "adjacent", "normalized","expandMorph"
+  ].forEach(id => {
     const el = elements[id];
     const event = id === "searchBtn" ? "click" : "change";
     el.addEventListener(event, searchChange);
   });
 
   elements.searchInput.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       searchVerses();
     }
   });
 
-  const fontSizeSlider = document.getElementById("fontSize");
-  const fontSize2Slider = document.getElementById("fontSize2");
-  const englishSecondary = document.getElementById("englishSecondary");
-  const greekSecondary = document.getElementById("greekSecondary");
+  const fontSizeSlider = document.getElementById('fontSize');
+  const fontSize2Slider = document.getElementById('fontSize2');
+  const englishSecondary = document.getElementById('englishSecondary');
+  const greekSecondary = document.getElementById('greekSecondary');
   // Live updates
-  fontSizeSlider.addEventListener("input", setFontSize);
-  fontSize2Slider.addEventListener("input", setFontSize);
-  englishSecondary.addEventListener("change", () => {
+  fontSizeSlider.addEventListener('input', setFontSize);
+  fontSize2Slider.addEventListener('input', setFontSize);
+  englishSecondary.addEventListener('change', () => {
     if (englishSecondary.checked) {
       greekSecondary.checked = false;
     }
     setFontSize();
   });
 
-  greekSecondary.addEventListener("change", () => {
+  greekSecondary.addEventListener('change', () => {
     if (greekSecondary.checked) {
       englishSecondary.checked = false;
     }
@@ -828,48 +805,40 @@ function setupEventListeners() {
   });
 
   elements.searchInput.addEventListener("beforeinput", (e) =>
-    handleGreekBeforeInput(e, elements.convertToGreek),
+    handleGreekBeforeInput(e, elements.convertToGreek)
   );
 
   elements.searchInput.addEventListener("input", handleGreekInput);
 
   window.addEventListener("click", function (e) {
-    const isMenuPopup = e.target.closest(".menu-popup, .ref-popup");
-    const isMenuToggleButton = e.target.matches("button[data-toggle-popup]");
+    const isMenuPopup = e.target.closest('.menu-popup, .ref-popup');
+    const isMenuToggleButton = e.target.matches('button[data-toggle-popup]');
 
     if (!isMenuPopup && !isMenuToggleButton) {
-      document.querySelectorAll(".menu-popup, .ref-popup").forEach((p) => {
+      document.querySelectorAll('.menu-popup, .ref-popup').forEach((p) => {
         p.style.display = "none";
       });
     }
   });
 
-  const toggleGreekHelpBtn = document.getElementById("toggleGreekHelp");
-  const greekHelpPopup = document.getElementById("greekHelpPopup");
-  const greekHelpImage = greekHelpPopup.querySelector("img");
+  const toggleGreekHelpBtn = document.getElementById('toggleGreekHelp');
+  const greekHelpPopup = document.getElementById('greekHelpPopup');
+  const greekHelpImage = greekHelpPopup.querySelector('img');
 
   // Toggle popup when ? button is clicked
-  toggleGreekHelpBtn.addEventListener("click", () => {
+  toggleGreekHelpBtn.addEventListener('click', () => {
     greekHelpPopup.hidden = !greekHelpPopup.hidden;
   });
 
   // Close popup when image is clicked
-  greekHelpImage.addEventListener("click", () => {
+  greekHelpImage.addEventListener('click', () => {
     greekHelpPopup.hidden = true;
   });
 
-  document
-    .getElementById("historyBackBtnRight")
-    .addEventListener("click", () => historyBack(1));
-  document
-    .getElementById("historyForwardBtnRight")
-    .addEventListener("click", () => historyForward(1));
-  document
-    .getElementById("historyBackBtnLeft")
-    .addEventListener("click", () => historyBack(0));
-  document
-    .getElementById("historyForwardBtnLeft")
-    .addEventListener("click", () => historyForward(0));
+  document.getElementById("historyBackBtnRight").addEventListener("click", () => historyBack(1));
+  document.getElementById("historyForwardBtnRight").addEventListener("click", () => historyForward(1));
+  document.getElementById("historyBackBtnLeft").addEventListener("click", () => historyBack(0));
+  document.getElementById("historyForwardBtnLeft").addEventListener("click", () => historyForward(0));
 }
 
 // Fancy Reference Selector Box code.
