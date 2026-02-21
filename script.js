@@ -750,12 +750,12 @@ function setupEventListeners() {
   elements.gapInput.addEventListener("input", () => {
     let verseRange = parseInt(elements.gapInput.value, 10);
     if (isNaN(verseRange) || verseRange < 1) elements.gapInput.value = 1;
-    if (currentRender === "search") searchVerses(); 
+    if (currentRender === "search") searchVerses();
     else if (elements.enforceGap.checked) {
       lastChanged = "start";
       adjustSelections();
       render();
-    } 
+    }
   });
 
   elements.enforceGap.addEventListener("change", () => {
@@ -815,12 +815,12 @@ function setupEventListeners() {
 
   elements.searchInput.addEventListener("input", handleGreekInput);
 
-  window.addEventListener('click', function (e) {
+  window.addEventListener('click', function(e) {
     const isMenuPopup = e.target.closest('.menu-popup, .ref-popup');
     const isMenuToggleButton = e.target.matches('button[data-toggle-popup]');
 
     if (!isMenuPopup && !isMenuToggleButton) {
-      document.querySelectorAll('.menu-popup, .ref-popup').forEach(p => {
+      document.querySelectorAll('.menu-popup, .ref-popup').forEach((p) => {
         p.style.display = 'none';
       });
     }
@@ -1132,6 +1132,55 @@ function populateVerses(bookIndex, chapterIndex, verseSelect) {
     verseSelect.add(new Option(i + 1, i));
   }
 }
+// Populate book filter dropdown
+function populateBookFilter() {
+  if (debugMode) console.log("populateBookFilter()");
+  const bookFilter = document.getElementById("bookFilter");
+  if (!bookFilter) return;
+  
+  // Keep "All Books" option, add individual books
+  bookNames.forEach((name, i) => {
+    if (!baseData[i] || baseData[i].length === 0) return;
+    const option = document.createElement("option");
+    option.value = i;
+    option.textContent = name;
+    bookFilter.appendChild(option);
+  });
+}
+
+function selectAllBooks() {
+  if (debugMode) console.log("selectAllBooks()");
+  const bookFilter = document.getElementById("bookFilter");
+  Array.from(bookFilter.options).forEach(opt => {
+    if (opt.value === "all") opt.selected = true;
+    else opt.selected = false;
+  });
+  saveSettings('save-id');
+}
+
+function selectGospels() {
+  if (debugMode) console.log("selectGospels()");
+  const bookFilter = document.getElementById("bookFilter");
+  const gospelIndices = [39, 40, 41, 42];
+  
+  Array.from(bookFilter.options).forEach(opt => {
+    if (opt.value === "all") opt.selected = false;
+    else opt.selected = gospelIndices.includes(parseInt(opt.value));
+  });
+  saveSettings('save-id');
+}
+
+function selectPaul() {
+  if (debugMode) console.log("selectPaul()");
+  const bookFilter = document.getElementById("bookFilter");
+  const paulIndices = [44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56];
+  
+  Array.from(bookFilter.options).forEach(opt => {
+    if (opt.value === "all") opt.selected = false;
+    else opt.selected = paulIndices.includes(parseInt(opt.value));
+  });
+  saveSettings('save-id');
+}
 
 function initializeSelections() {
   if (debugMode) console.log("initializeSelections()");
@@ -1240,8 +1289,8 @@ function initializeSelections() {
 
   // Load search params if present
   applyUrlSearch();
-
   // Initialize panel ref/search based on saved/random data.
+  populateBookFilter();
   //for (let i = 0; i < maxPanels; i++) {
   //  storePanelState(i);
   //}
