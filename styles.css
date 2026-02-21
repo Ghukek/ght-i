@@ -1,4 +1,4 @@
-/* GHT Study Tool by Nathan P. Wiebe. CSS content. Dedicated to the Public Domain. */
+/* GHT Study Tool by Nathan P. Wiebe. CSS content. Granted to the Public Domain. */
 
 :root {
   --font-family: "Times New Roman", serif;
@@ -745,10 +745,10 @@ select {
   flex-grow:1;
   flex-basis:0;
   overflow: auto;
-  height: var(--panel-height) - 4px;
+  height: calc(var(--panel-height) - 4px);
   /* from #output */
   display: flex;
-  align-items: center;
+  align-items: flex-start;;
   flex-wrap: wrap;
   white-space: normal;
   font-size: var(--font-size);

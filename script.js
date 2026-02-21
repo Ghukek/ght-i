@@ -1,4 +1,4 @@
-// GHT Study Tool by Nathan P. Wiebe. Javascript content. Dedicated to the Public Domain.
+// GHT Study Tool by Nathan P. Wiebe. Javascript content. Granted to the Public Domain.
 
 const debugMode = true;
 const debugModeExtra = false;
@@ -412,8 +412,13 @@ function saveState(empty = false) {
 
   if (select.value !== "none" && panelID === 1) panelID = 2; // Use third stack for alternate translation panel.
 
-  const stack = historyStacks[panelID] ??= [];
-  let index = historyIndexes[panelID] ??= -1;
+  const stack = historyStacks[panelID] !== undefined && historyStacks[panelID] !== null
+    ? historyStacks[panelID]
+    : (historyStacks[panelID] = []);
+
+  let index = historyIndexes[panelID] !== undefined && historyIndexes[panelID] !== null
+    ? historyIndexes[panelID]
+    : (historyIndexes[panelID] = -1);
 
   let override = false;
   if (panelID !== 0 && elements.linkPanels.checked && stack[index]) { // When link panels is active, only update history stack on second panel if search.
@@ -2037,7 +2042,7 @@ function fixOverwideEng(container) {
     if (eng.scrollWidth <= containerWidth) continue;
 
     const text = eng.textContent;
-    const parts = text.split(/(?<=\/)/); // keep slashes
+    const parts = text.match(/[^\/]+\/?|\/+/g) || []; // keep slashes
     if (parts.length === 1) continue;
 
     const measurer = document.createElement("span");
@@ -4643,6 +4648,55 @@ function buildPanels(count) {
 
   outputContainer.innerHTML = "";
 
+  // Global scroll ownership state
+  let scrollOwner = null;
+  let rAFScheduled = false;
+
+  function handleScroll(panel) {
+    // Only the active panel drives sync
+    if (scrollOwner && scrollOwner !== panel) return;
+
+    scrollOwner = panel;
+
+    if (!rAFScheduled) {
+      rAFScheduled = true;
+      requestAnimationFrame(() => {
+        syncScroll(scrollOwner);
+        rAFScheduled = false;
+
+        // Release ownership after momentum ends
+        clearTimeout(panel._releaseTimer);
+        panel._releaseTimer = setTimeout(() => {
+          scrollOwner = null;
+        }, 120); // 120ms after last scroll
+      });
+    }
+  }
+
+  function syncScroll(source) {
+    if (!elements.linkPanels.checked || !elements.linkScroll.checked) return;
+
+    if (historyStacks[0][historyIndexes[0]].currentRender !== "reference") return;
+    let secondPanel = select.value !== "none" ? 2 : 1;
+    if (historyStacks[secondPanel][historyIndexes[secondPanel]].currentRender !== "reference") return;
+
+    const panels = outputContainer.querySelectorAll(".panel");
+
+    const proportion =
+      source.scrollTop / (source.scrollHeight - source.clientHeight || 1);
+
+    panels.forEach(panel => {
+      if (panel === source) return;
+
+      // Calculate target scrollTop for proportional sync
+      const targetScroll = Math.round(proportion * (panel.scrollHeight - panel.clientHeight));
+
+      if (panel.scrollTop !== targetScroll) {
+        panel.scrollTop = targetScroll;
+      }
+    });
+  }
+
   for (let i = 0; i < count; i++) {
     const div = document.createElement("div");
     div.className = "panel";
@@ -4665,6 +4719,9 @@ function buildPanels(count) {
       // Otherwise, activate the panel
       activate(div);
     });
+
+    div.addEventListener("scroll", () => handleScroll(div));
+
     outputContainer.appendChild(div);
 
     if (i < count - 1) {
