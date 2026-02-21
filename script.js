@@ -4113,26 +4113,61 @@ function copyText(mode) {
 
   togglePopup('sharePopup')
 
-  // Bail out if grid view is active
-  if (output.querySelector(".word-list-grid")) {
-    showToast("Search list display active, skipping copy.");
+  // Tably copy if table exists
+  const grid = output.querySelector(".word-list-grid");
+  if (mode === "table" &&grid) {
+    const rows = [];
+
+    grid.querySelectorAll(".word-row").forEach(row => {
+      const cols = [...row.querySelectorAll(".col")]
+        .map(c => c.textContent.trim());
+      rows.push(cols.join("\t")); // tab-delimited
+    });
+
+    const result = rows.join("\n");
+
+    navigator.clipboard.writeText(result)
+      .then(() => showToast("Table copied!"))
+      .catch(err => showToast("Copy failed: ", err));
+
+    return;
+  } else if (mode !== "table" && grid) {
+    showToast("No verse text to copy, use Table copy.");
+    return;
+  } else if (mode === "table" && !grid) {
+    showToast("No table to copy, use Greek/English copy for verse text.");
     return;
   }
 
   let texts = [];
 
-  // Traverse in natural DOM order
-  output.querySelectorAll(".verse-label, .word .grk, .word .eng").forEach(span => {
-    if (span.classList.contains("verse-label")) {
-      texts.push('[' + span.textContent.trim() + ']');
-    } else if (mode === "grk" && span.classList.contains("grk")) {
-      texts.push(span.textContent.trim());
-    } else if (mode === "eng" && span.classList.contains("eng")) {
-      texts.push(span.textContent.trim());
-    }
-  });
+  // include <hr> in traversal
+  output.querySelectorAll(".verse-label, .word .grk, .word .eng, hr.search-separator")
+    .forEach(node => {
 
-  const result = texts.join(" ").replace(/\s+/g, " ").trim();
+      if (node.tagName === "HR") {
+        texts.push("\n\n"); // separator break
+        return;
+      }
+
+      if (node.classList.contains("verse-label")) {
+        texts.push('[' + node.textContent.trim() + ']');
+      }
+      else if (mode === "grk" && node.classList.contains("grk")) {
+        texts.push(node.textContent.trim());
+      }
+      else if (mode === "eng" && node.classList.contains("eng")) {
+        texts.push(node.textContent.trim());
+      }
+    });
+
+  let result = texts.join(" ");
+
+  // clean spacing around line breaks + collapse spaces
+  result = result
+    .replace(/\s*\n\n\s*/g, "\n\n")
+    .replace(/[^\S\n]+/g, " ")
+    .trim();
 
   if (result) {
     navigator.clipboard.writeText(result)
