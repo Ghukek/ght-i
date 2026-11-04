@@ -3282,7 +3282,12 @@ function showPopup(e) {
   }
 
   if (!showStrongs) {
-    let label = strongs.includes(".") ? "AP-Strongs" : "Strong's";
+    let label = "Strong's";
+    if (strongs > 99999) {
+        label = "G-Strong's";
+    } else if (strongs > 9999) {
+        label = "AP-Strong's";
+    }
     popupContent += clickableLine(label, strongs);
   }
 

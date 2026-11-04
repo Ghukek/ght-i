@@ -316,9 +316,7 @@
       <p>Refer to <a href="https://www.youtube.com/playlist?list=PL7QiqIl3Qy8ivF2sALVY3Acs-esSwELxL">this Youtube playlist</a> for a series of tutorials helping you get started.</p>
       <h3>Recent Changes:</h3>
       <ul>
-        <li>15 Mar 26: Minor update fixing several bugs and making UI/UX improvements.</li>
-        <li>2 Apr 26: Updated history navigation logic for more intuitive experience. Added UI element to indicate if parallel mode is active. Added more generous reference search handling. Several bug fixes.</li>
-        <li>Want to know what's next? Check <a href="/ght-i-raw.html">the development version</a> or the <a href="https://github.com/Ghukek/ght-i">GitHub repository</a> to see what I'm working on.</li>
+        <li>3 Nov 26: Implemented new extended-Strong's schema derived from Charles VanDerpool's ABP AP-Strong's schema, see the information below.</li>
       </ul>
       <h3>Reference Selection:</h3>
       <p>Select your start or end book, chapter, and verse from "Start Ref" and "End Ref". </p>
@@ -334,7 +332,7 @@
         <li>Greek: shows the Greek text.</li>
         <li>English: shows the English translation.</li>
         <li>Morphology: shows grammatical parsing information in abbreviated form. Expanded grammar information is shown in the popup.</li>
-        <li>Strong's: shows Strong's Concordance numbers.</li>
+        <li>Strong's: shows Strong's Concordance numbers or equivalent.</li>
         <li>Roots: shows my personal categorization of related words by showing the etymological breakdown of primitive roots from which they are constructed. Greek has many compound words. This is meant to be a more comprehesive set of connections than the Strong's concordance numbers. However, please be careful since some of the connections are a bit more spurious than others and you need to watch out for the etymological fallacy.</li>
       </ul>
       <p>Other display settings:</p>
@@ -403,6 +401,19 @@
       <p>The navigation buttons at the bottom of the page are relatively self-explanatory. They bring you forward or back by one chapter, page, or verse. A page is defined as the number of verses currently rendered.</p>
       <p>You can also use navigation arrow keys to navigate book, chapter, page, and verse. Use the left /right arrow keys for the verse, and the up/down arrow keys for the page. Shift + left/right moves the chapter, and ctrl + left/right moves the book.</p>
       <p>When searching, an additional page navigation button may appear, showing that you have more search results than the current maximum per-page. You can use the buttons or the left/right or the up/down arrow keys.</p>
+      <h3>Extended Strong's Schema and Strong's Errata:</h3>
+      <p>For the Old Testament: Any Greek Word not in the New Testament and not a proper noun is derived from the AP-Strong's designation by moving the tenths place into the ten thousands place. Thus, where Charles VanDerpool's lexical concordance will have xxxx.y, I will have yxxxx. The reason for this is that I have seen people get confused by the decimal numbers. The decimal number is only to place the word between two Strong's numbers in alphabetical order, but some people have mistakenly interpreted this to mean that a decimal word is related to the whole number. Since there is no particular reason in the digital age to order words in alphabetical order, I don't see a reason to maintain this.</p>
+      <p>For Strong's corrections and Old Testament Proper Nouns: Considering that any five-digit number is a lossless conversion from an AP-Strong's number, any word that does not already have either a Strong's Number or an AP-Strong's number is given a six-digit number with the same logic. The least four significant digits will be the a nearby Strong's number.</p>
+      <p>List of Known Strong's Errata</p>
+      <ul>
+        <li>G376 αναπηρος is spelled αναπειροος. The GHT decides that this is a different word derived from a different verbal root, so this is assigned 100376.</li>
+        <li>G1357 διορθωσις consists of two different words. Elsewhere, Strong lists -σις and -μα words as separate strong's numbers, so διορθωμα gets 101357.</li>
+        <li>G2397 ιδου is merged into G1492 ειδω, respecting that what Strong called an interjection is really just an imperative verb. Note that this merge is also done by other sources.</li>
+        <li>G4225 που is merged into G4226 που since, while the interrogative adverb is sometimes used in ways that would be interpreted by the English mind as not interrogative, π- is fundamentally an interrogative prefix.</li>
+        <li>G197 ακριβεστερον is merged into G199 ακριβως as other sources do due to the fact that Strong's modus operandi is to include the comparative form as part of the same Strong's number.</li>
+        <li>G848 εαυτου is merged into G846 αυτος. While the personal pronoun is sometimes used in ways where the English mind would interpret it as reflexive, it is not inherently reflexive and these words do not have the reflexive ε- prefix. The reflexive prounouns are G1438 εαυτου, G4572 σεαυτου, and G1683, εμαυτου.</li>
+        <li>[Additional cases under review.]</li>
+      </ul>
       <h3>Contributors:</h3>
       <ul>
         <li>Garth Wiebe: Intense user-testing revealing countless bugs and small suggestions during development sprints.</li>
