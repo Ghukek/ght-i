@@ -929,7 +929,17 @@ function blockSpacesBeforeInput(e) {
 
 // Called only after baseData is loaded
 function setupEventListeners() {
-  if (debugMode) console.log("setupEventListeners()");
+
+  // --- Translation Abbreviations Click Handler ---
+  const translationAbbrev = document.getElementById("translationAbbrev");
+
+  if (translationAbbrev) {
+    translationAbbrev.addEventListener("click", (event) => {
+      event.stopPropagation();
+      window.location.href = "/jsonsource.html";
+    });
+  }
+
   // Helper for start/end selectors
   const rangeSelectors = [
     { book: "bookStart", chapter: "chapterStart", verse: "verseStart", type: "start" },
