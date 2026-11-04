@@ -936,7 +936,7 @@ function setupEventListeners() {
   if (translationAbbrev) {
     translationAbbrev.addEventListener("click", (event) => {
       event.stopPropagation();
-      window.location.href = "/jsonsource.html";
+      window.open("/jsonsource.html", "_blank");
     });
   }
 
