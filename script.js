@@ -237,45 +237,46 @@ async function updateToolLastUpdated() {
 }
 
 if ('serviceWorker' in navigator) {
-
   let refreshing = false;
 
-  // Reload when a new SW takes control
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      window.location.reload();
-    }
-  });
+  function reloadOnce() {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  }
 
-  // Listen for update notifications from SW
+  // Reload when a newly activated service worker takes control.
+  navigator.serviceWorker.addEventListener('controllerchange', reloadOnce);
+
+  // Reload when the current service worker caches changed HTML.
   navigator.serviceWorker.addEventListener('message', event => {
-    if (event.data.type === 'UPDATE_AVAILABLE') {
-      window.location.reload();
+    if (event.data?.type === 'UPDATE_AVAILABLE') {
+      reloadOnce();
     }
   });
 
   navigator.serviceWorker.register('/sw.js').then(reg => {
-
-    // Force activate waiting SW
+    // Activate an already-waiting worker.
     if (reg.waiting) {
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     }
 
+    // Activate a newly installed worker when an older one controls the page.
     reg.addEventListener('updatefound', () => {
       const newWorker = reg.installing;
+      if (!newWorker) return;
 
       newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+        if (
+          newWorker.state === 'installed' &&
+          navigator.serviceWorker.controller
+        ) {
           newWorker.postMessage({ type: 'SKIP_WAITING' });
         }
       });
     });
-
-    // Now safely trigger update check
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'CHECK_FOR_UPDATE' });
-    }
+  }).catch(error => {
+    console.warn('Service worker registration failed:', error);
   });
 }
 
@@ -417,6 +418,19 @@ function getCount() {
 
   //document.getElementById("count").textContent = countWithIdent;
   document.getElementById("percentage").textContent = percentage.toFixed(2) + "%";
+}
+
+function safeSetGap(value, loadingSettings = false) {
+  let gap = parseInt(value, 10);
+
+  if (isNaN(gap) || gap < 1) gap = 1;
+
+  elements.gapInput.value = gap;
+  autoGapInputWidth(elements.gapInput);
+
+  if (!loadingSettings) {
+    saveSettings();
+  }
 }
 
 const elements = {};
@@ -982,6 +996,7 @@ function setupEventListeners() {
       adjustSelections();
       render();
     }
+    saveSettings()
   });
 
   elements.enforceGap.addEventListener("change", () => {
@@ -1492,9 +1507,11 @@ function initializeSelections(userInit = false) {
   }
 
   if (range?.gapInput > 0) {
-    elements.gapInput.value = range.gapInput;
+    safeSetGap(range.gapInput);
+  } else if (settings?.gapInput != null) {
+    safeSetGap(settings.gapInput, true);
   } else {
-    elements.gapInput.value = Math.floor(Math.random() * (20 - 2 + 1)) + 2; // random 2–20
+    safeSetGap(Math.floor(Math.random() * (20 - 2 + 1)) + 2); // random 2–20
   }
 
   // Initialize display variables after loading settings
@@ -1579,6 +1596,9 @@ function initializeSelections(userInit = false) {
   if (range?.bookEnd == null && settings?.bookEnd == null) {
     lastChanged = "start"; // Default to adjusting start
     adjustSelections();
+  } else {
+    const { count: gap, } = getRefResults();
+    safeSetGap(gap)
   }
 
   // Load search params if present
@@ -1717,9 +1737,7 @@ function applyUrlSearch() {
   elements.reverseInterlinear.checked = params.get("r") !== "0";
   elements.highlightSearch.checked = params.get("h") !== "0";
 
-  if (params.has("g")) elements.gapInput.value = params.get("g");
-  
-  autoGapInputWidth(elements.gapInput);
+  if (params.has("g")) safeSetGap(params.get("g"));
 
   if (params.get("c") === "1" || (params.get("search") && params.get("search").includes(" "))) {
     currentRender = "conSearch";
@@ -2333,8 +2351,7 @@ function render(customVerses = null, inDouble = false, curRen = "reference") {
     if (refVerses) {
       render(refVerses, inDouble, mode);
     }
-    elements.gapInput.value = gap;
-    autoGapInputWidth(elements.gapInput);
+    safeSetGap(gap);
     if (debugMode) console.log("end render()");
     return
   }
@@ -2620,8 +2637,7 @@ function getRefResults(refData = null) {
         if (!verseData) continue;
 
         if (count >= parseInt(elements.searchSize.value, 10)) {
-          elements.gapInput.value = count;
-          autoGapInputWidth(elements.gapInput);
+          safeSetGap(count);
           elements.bookEnd.value = b;
           populateChapters(b, elements.chapterEnd);
           elements.chapterEnd.value = c;
@@ -4319,7 +4335,7 @@ function refSearch(searchTerm) {
     if (allResults.at(0)?.verseData === "bar") allResults.shift();
 
     if (ref.length === 1) {
-      elements.gapInput.value = count;
+      safeSetGap(count);
       setReferenceRange(ref[0].start);
       updateDisplay();
       render();
@@ -5603,8 +5619,7 @@ function loadPanelState(panelID) {
   elements.chapterEnd.value = state.chapterEnd;
   elements.verseEnd.value = state.verseEnd;
   //elements.searchInput.value = state.searchInput;
-  elements.gapInput.value = state.gapInput;
-  autoGapInputWidth(elements.gapInput);
+  safeSetGap(state.gapInput, true);
   currentRender = state.currentRender;
   updateDisplay();
 }
@@ -5820,11 +5835,12 @@ function buildPanels(count) {
   for (let i = 0; i < count; i++) { // Start at 1 because first panel is already loaded properly on init.
     const panel = outputContainer.querySelector(`[data-panel-i-d="${i}"]`);
     if (panel) {
-      activate(panel);
+      activate(panel, elements.gapInput.value);
+      console.log(historyIndexes[i])
       if (historyIndexes[i] === -1) {
         if (!urlSearch || i === 0) onOptionsChange();
         else render();
-      } else loadState(i, historyIndexes[i])
+      } else loadState(i, 0)
       saveSettings();
     }
   }
@@ -5847,8 +5863,7 @@ function activate(panel, fromRender = false) {
   loadSettings(false, false);
   if (!fromRender) loadPanelState(currentPanelId);
   else {
-    elements.gapInput.value = fromRender; // gapInput is saved in settings and thus overridden when render() activates panels for linking purposes.
-    autoGapInputWidth(elements.gapInput);
+    safeSetGap(fromRender); // gapInput is saved in settings and thus overridden when render() activates panels for linking purposes.
   }
 }
 

@@ -1,114 +1,102 @@
 const CACHE_NAME = 'OfflineGHT-v1';
 const FILES_TO_CACHE = [
-  'ght-i.html',   // the only page that changes
+  'ght-i.html',
   'icon-192.png',
   'grkkeyboard.png'
 ];
 
-// Install event: cache all files
+// Install: cache the required files, then activate immediately.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(FILES_TO_CACHE))
-      .then(() => self.skipWaiting()) // 🔥 activate immediately
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate event: clean up old caches
+// Activate: remove old caches and take control.
 self.addEventListener('activate', event => {
   event.waitUntil(
     Promise.all([
-      // 🧹 Clean old caches
       caches.keys().then(keys =>
         Promise.all(
-          keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null)
+          keys.map(key =>
+            key !== CACHE_NAME ? caches.delete(key) : Promise.resolve()
+          )
         )
       ),
-      // 🔥 Take control immediately
       self.clients.claim()
     ])
   );
 });
 
-// Fetch event: cache-then-network for ght-i.html, otherwise cache-first
+// Cache-then-network: serve cached content immediately while updating it.
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Ignore cross-origin
-  if (url.origin !== self.location.origin) return;
+  // Handle only same-origin GET requests.
+  if (url.origin !== self.location.origin || request.method !== 'GET') {
+    return;
+  }
 
-  event.respondWith(
-    caches.match(request).then(async cachedResponse => {
+  const updatePromise = (async () => {
+    const cached = await caches.match(request);
+    const response = await fetch(request);
 
-      const fetchPromise = fetch(request)
-        .then(async networkResponse => {
-          if (!networkResponse || networkResponse.status !== 200) {
-            return networkResponse;
-          }
+    if (!response.ok || response.status !== 200) {
+      return response;
+    }
 
-          const cache = await caches.open(CACHE_NAME);
+    let pageChanged = false;
 
-          // 🔥 Only check YOUR main HTML file
-          if (url.pathname.endsWith('ght-i.html') && cachedResponse) {
-
-            const oldETag = cachedResponse.headers.get('ETag');
-            const newETag = networkResponse.headers.get('ETag');
-
-            const oldLastMod = cachedResponse.headers.get('Last-Modified');
-            const newLastMod = networkResponse.headers.get('Last-Modified');
-
-            const changed =
-              (oldETag && newETag && oldETag !== newETag) ||
-              (oldLastMod && newLastMod && oldLastMod !== newLastMod);
-
-            if (changed) {
-              const clients = await self.clients.matchAll();
-              clients.forEach(client =>
-                client.postMessage({ type: 'UPDATE_AVAILABLE' })
-              );
-            }
-          }
-
-          // Always update cache
-          await cache.put(request, networkResponse.clone());
-
-          return networkResponse;
-        })
-        .catch(() => null);
-
-      return cachedResponse || fetchPromise;
-    })
-  );
-});
-
-self.addEventListener('message', async event => {
-  if (event.data.type === 'CHECK_FOR_UPDATE') {
-    const clients = await self.clients.matchAll();
-
-    // Force a re-fetch of the HTML
-    const response = await fetch('/ght-i.html', { cache: 'no-store' });
+    // Detect changes to the main HTML by comparing actual contents.
+    if (url.pathname.endsWith('/ght-i.html') && cached) {
+      const oldHTML = await cached.clone().text();
+      const newHTML = await response.clone().text();
+      pageChanged = oldHTML !== newHTML;
+    }
 
     const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match('/ght-i.html');
+    await cache.put(request, response.clone());
+
+    // Notify only after the new page is safely cached.
+    if (pageChanged) {
+      const clients = await self.clients.matchAll();
+      clients.forEach(client => {
+        client.postMessage({ type: 'UPDATE_AVAILABLE' });
+      });
+    }
+
+    return response;
+  })();
+
+  // Keep the network update alive even when returning the cache immediately.
+  event.waitUntil(updatePromise.then(() => undefined).catch(() => {}));
+
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
 
     if (cached) {
-      const oldLastMod = cached.headers.get('Last-Modified');
-      const newLastMod = response.headers.get('Last-Modified');
-
-      if (oldLastMod !== newLastMod) {
-        await cache.put('/ght-i.html', response.clone());
-
-        clients.forEach(client =>
-          client.postMessage({ type: 'UPDATE_AVAILABLE' })
-        );
-      }
+      return cached;
     }
-  }
+
+    // First visit or uncached resource: wait for the network.
+    try {
+      return await updatePromise;
+    } catch {
+      // No cached response and network unavailable.
+      return new Response('This resource is unavailable offline.', {
+        status: 503,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
+    }
+  })());
 });
 
+// Allow a newly installed service worker to activate immediately.
 self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+  if (event.data?.type === 'SKIP_WAITING') {
+    event.waitUntil(self.skipWaiting());
   }
 });
